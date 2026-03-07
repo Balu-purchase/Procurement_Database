@@ -3,7 +3,7 @@ import pandas as pd
 
 # --- CONFIGURATION ---
 # Replace this with your Google Sheet CSV Link
-SHEET_URL = "https://resolutegroups-my.sharepoint.com/:x:/g/personal/purchase_resoluteelectronics_com/IQD4boTyckDjSK47qYSPoVePAXhfIPl0CXUjbyYMREW925k?e=SwfpbL"
+SHEET_URL = "https://resolutegroups-my.sharepoint.com/:x:/g/personal/purchase_resoluteelectronics_com/"data.csv""
 
 st.set_page_config(page_title="Industrial Portal", layout="wide")
 
