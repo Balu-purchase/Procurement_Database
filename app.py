@@ -20,11 +20,13 @@ DB = {
  "bom_team": {"p": "BOM2026", "r": "BOM"}
 }
 
-# 4. SESSION
+# 4. SESSION INITIALIZE
 if "auth" not in st.session_state:
     st.session_state.auth = False
 if "log_data" not in st.session_state:
     st.session_state.log_data = []
+if "u_role" not in st.session_state:
+    st.session_state.u_role = None
 
 # 5. LOGIN
 if not st.session_state.auth:
@@ -60,19 +62,45 @@ df = load()
 m = st.sidebar.radio("NAV", ["APPROVALS", "AUDIT LOG"])
 if st.sidebar.button("OUT"):
     st.session_state.auth = False
+    st.session_state.u_role = None
     st.rerun()
 
 # 9. DASHBOARD
 if m == "APPROVALS":
     st.header("BOM PRICE APPROVALS")
-    if not df.empty and st.session_state.u_role == "HOD":
+    # SAFETY CHECK FOR ROLE
+    curr_role = st.session_state.get("u_role")
+    
+    if not df.empty and curr_role == "HOD":
         st.subheader("PENDING FOR BIXAPATHI")
         appr_list = [x['V'] for x in st.session_state.log_data]
         if T_C in df.columns:
             p_df = df[df[T_C].isna()]
             p_df = p_df[~p_df[V_C].isin(appr_list)]
             for i, r in p_df.iterrows():
-                # SHORT VERTICAL ASSIGNMENT
                 vn = str(r.get(V_C))
                 pn = str(r.get(P_C))
-                pr
+                pr = str(r.get(R_C))
+                st.write("**" + vn + "** | Part: " + pn + " | Price: " + pr)
+                t = st.text_input("Comment", key="t"+str(i))
+                if st.button("APPROVE", key="b"+str(i)):
+                    if t.upper() in ["APPROVED", "OK"]:
+                        stat = str(r.get(S_C, "N/A"))
+                        ts = datetime.now().strftime('%Y-%m-%d %H:%M')
+                        new = {"V": vn, "N": pn, "P": pr, "S": stat, "T": ts}
+                        st.session_state.log_data.append(new)
+                        st.success("Saved to Logs")
+                        st.rerun()
+    st.divider()
+    st.dataframe(df)
+
+# 10. AUDIT LOG
+else:
+    st.header("OFFICIAL AUDIT LOG")
+    for r in st.session_state.log_data:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.write("**VENDOR:** " + r["V"])
+        st.write("**PART:** " + r["N"])
+        st.write("**PRICE:** " + r["P"])
+        st.write("**STATUS:** " + r["S"])
+        st.write("**APPROVER:** " + H_N)
