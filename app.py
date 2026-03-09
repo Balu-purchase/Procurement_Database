@@ -20,7 +20,7 @@ DB = {
  "bom_team": {"p": "BOM2026", "r": "BOM"}
 }
 
-# 4. SESSION (FOR LOG SAVING)
+# 4. SESSION
 if "auth" not in st.session_state:
     st.session_state.auth = False
 if "log_data" not in st.session_state:
@@ -72,9 +72,7 @@ if m == "APPROVALS":
             p_df = df[df[T_C].isna()]
             p_df = p_df[~p_df[V_C].isin(appr_list)]
             for i, r in p_df.iterrows():
-                vn, pn, pr = str(r.get(V_C)), str(r.get(P_C)), str(r.get(R_C))
-                st.write("**" + vn + "** | Part: " + pn + " | Price: " + pr)
-                t = st.text_input("Comment", key="t"+str(i))
-                if st.button("APPROVE", key="b"+str(i)):
-                    if t.upper() in ["APPROVED", "OK"]:
-                        new = {"V": vn, "N": pn, "P": pr, "S": str(r
+                # SHORT VERTICAL ASSIGNMENT
+                vn = str(r.get(V_C))
+                pn = str(r.get(P_C))
+                pr
