@@ -6,7 +6,7 @@ st.set_page_config(page_title="SKYQUAD | SECURE PORTAL", layout="wide")
 
 # --- 2. THE ANIMATED BACKGROUND & UI ---
 st.markdown("""
-    <style>
+<style>
     .stApp {
         background: linear-gradient(-45deg, #020617, #0f172a, #1e1b4b, #0369a1);
         background-size: 400% 400%;
@@ -25,10 +25,17 @@ st.markdown("""
         padding: 10px 20px; border-radius: 50px; background: rgba(0,0,0,0.4);
     }
     h1, h2, h3, p, label { color: white !important; }
-    .glass-panel {
-        background: rgba(255, 255, 255, 0.07); backdrop-filter: blur(15px);
-        border: 1px solid rgba(255, 255, 255, 0.15); padding: 40px;
-        border-radius: 25px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
-    }
-    </style>
-    <div class="watermark">NONBOM TEAM - PURCHASE SKYQUAD
+</style>
+<div class="watermark">NONBOM TEAM - PURCHASE SKYQUAD ELECTRONICS</div>
+""", unsafe_allow_html=True)
+
+# --- 3. SESSION LOGIC ---
+if "auth" not in st.session_state:
+    st.session_state.auth = False
+
+# --- 4. LOGIN GATE ---
+if not st.session_state.auth:
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    _, col, _ = st.columns([1, 1.5, 1])
+    with col:
+        st.header("🔐 SKYQUAD LOGIN
