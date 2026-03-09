@@ -8,20 +8,21 @@ st.set_page_config(page_title="BOM Approval", layout="wide")
 # 2. CONFIG
 H_N = "Bixapathi"
 H_D = "Head of Department (HOD)"
+G_N = "General Manager"
 DB = {
  "hod_office": {"p": "HOD789", "r": "HOD"},
- "bom_team": {"p": "BOM2026", "r": "BOM"}
+ "gm_office": {"p": "GM2026", "r": "GM"}
 }
 
-# 3. SESSION INITIALIZE
+# 3. SESSION STORAGE (OFFICIAL RECORDS)
 if "auth" not in st.session_state:
     st.session_state.auth = False
-if "log_data" not in st.session_state:
-    st.session_state.log_data = []
+if "official_records" not in st.session_state:
+    st.session_state.official_records = []
 
 # 4. LOGIN
 if not st.session_state.auth:
-    st.sidebar.title("🔐 BOM LOGIN")
+    st.sidebar.title("🔐 OFFICIAL LOGIN")
     uid = st.sidebar.text_input("ID")
     upw = st.sidebar.text_input("PW", type="password")
     if st.sidebar.button("LOG IN"):
@@ -47,73 +48,83 @@ def load():
 df = load()
 
 # 6. NAVIGATION
-m = st.sidebar.radio("MENU", ["PENDING APPROVALS", "OFFICIAL AUDIT LOG"])
+m = st.sidebar.radio("MENU", ["PENDING APPROVALS", "OFFICIAL RECORDS"])
 if st.sidebar.button("LOGOUT"):
     st.session_state.auth = False
     st.rerun()
 
-# 7. PENDING APPROVALS TAB
+# 7. PENDING APPROVALS (HOD & GM WORKBENCH)
 if m == "PENDING APPROVALS":
-    st.header("🏭 PRICE APPROVAL PENDING FOR HOD")
+    st.header("🏭 PENDING PRICE VERIFICATION")
+    role = st.session_state.get("u_role")
     
-    if st.session_state.u_role == "HOD" and not df.empty:
-        # Dynamic Column Mapping
-        cols = df.columns.tolist()
-        T_C = "HOD APPROVAL"
-        V_C = "VENDOR NAME"
-        P_C = "PART NUMBER"
-        R_C = "PRICE"
-        S_C = "BOM STATUS"
+    if not df.empty:
+        # Define the target columns based on user role
+        T_C = "HOD APPROVAL" if role == "HOD" else "GM APPROVAL"
+        V_C, P_C, R_C, S_C = "VENDOR NAME", "PART NUMBER", "PRICE", "BOM STATUS"
 
-        # Logic for Filtering Pending Items
+        # Filter: Only show rows where the specific approval column is EMPTY
         p_df = df[df[T_C].isna() | (df[T_C].astype(str).str.strip() == "")]
-        done = [x['V'] + x['N'] for x in st.session_state.log_data]
-        p_df = p_df[~(p_df[V_C] + p_df[P_C]).isin(done)]
+        
+        # Filter out what we already moved to records in this session
+        done_ids = [x['V'] + x['N'] for x in st.session_state.official_records]
+        p_df = p_df[~(p_df[V_C] + p_df[P_C]).isin(done_ids)]
 
         if p_df.empty:
-            st.success("✅ No pending reviews for Bixapathi.")
+            st.success("✅ All pending items have been cleared.")
         else:
             # Table Header
             h1, h2, h3, h4, h5 = st.columns([2, 2, 1, 2, 1])
             h1.subheader("VENDOR")
             h2.subheader("PART NO")
             h3.subheader("PRICE")
-            h4.subheader("COMMENT")
+            h4.subheader("SIGNATURE (TYPE OK)")
             h5.subheader("ACTION")
 
             # Table Rows
             for i, r in p_df.iterrows():
                 c1, c2, c3, c4, c5 = st.columns([2, 2, 1, 2, 1])
-                v, n, p = str(r.get(V_C)), str(r.get(P_C)), str(r.get(R_C))
-                s = str(r.get(S_C))
+                vn, pn, pr = str(r.get(V_C)), str(r.get(P_C)), str(r.get(R_C))
                 
-                c1.write(v)
-                c2.write(n)
-                c3.write(p)
-                t_in = c4.text_input("cmt", key=f"t{i}", label_visibility="collapsed")
+                c1.write(vn)
+                c2.write(pn)
+                c3.write(pr)
                 
-                if c5.button("OK", key=f"b{i}"):
-                    if t_in.upper() == "APPROVED":
+                # Signature Input (Empty by default)
+                sig_input = c4.text_input("Sig", key="sig"+str(i), label_visibility="collapsed")
+                
+                if c5.button("OK", key="btn"+str(i)):
+                    if sig_input.upper() in ["OK", "APPROVED", "OKAY"]:
                         ts = datetime.now().strftime('%Y-%m-%d %H:%M')
-                        new = {"V": v, "N": n, "P": p, "S": s, "C": t_in, "T": ts}
-                        st.session_state.log_data.append(new)
-                        st.success("Approved: " + v)
+                        approver = H_N if role == "HOD" else G_N
+                        
+                        # MOVE ENTIRE ROW TO OFFICIAL RECORDS
+                        record = {
+                            "V": vn, "N": pn, "P": pr, 
+                            "S": str(r.get(S_C)), 
+                            "SIG": sig_input.upper(),
+                            "BY": approver,
+                            "TIME": ts
+                        }
+                        st.session_state.official_records.append(record)
+                        st.success("Record Finalized: " + vn)
                         st.rerun()
                 st.divider()
 
-    st.write("### 📊 MASTER DATABASE VIEW")
+    st.write("### 📊 LIVE DATABASE VIEW")
     st.dataframe(df, use_container_width=True)
 
-# 8. OFFICIAL AUDIT LOG TAB (NO TRIPLE QUOTES)
+# 8. OFFICIAL RECORDS (THE DRAFTS / AUDIT LOG)
 else:
-    st.header("📜 OFFICIAL AUDIT LOG")
-    if not st.session_state.log_data:
-        st.info("No items approved this session.")
+    st.header("📜 OFFICIAL ARCHIVED RECORDS")
+    if not st.session_state.official_records:
+        st.info("No records have been moved to official logs yet.")
     
-    for r in st.session_state.log_data:
+    for r in st.session_state.official_records:
         with st.container(border=True):
-            st.success("STATUS: " + r['C'])
+            st.success("VERIFIED BY: " + r['BY'])
             st.write("**VENDOR:** " + r['V'] + " | **PART:** " + r['N'])
-            st.write("**PRICE:** " + r['P'] + " | **BOM STATUS:** " + r['S'])
-            st.write("**APPROVER:** " + H_N + " (" + H_D + ")")
-            st.write
+            st.write("**PRICE:** " + r['P'] + " | **STATUS:** " + r['S'])
+            st.write("**OFFICIAL SIGNATURE:** " + r['SIG'])
+            st.write("**TIMESTAMP:** " + r['TIME'])
+            st.markdown("*Archived Document - Signed by " + r['BY'] + "*")
