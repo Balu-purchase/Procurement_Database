@@ -3,12 +3,11 @@ import pandas as pd
 from datetime import datetime
 
 # 1. SETUP
-st.set_page_config(page_title="BOM", layout="wide")
+st.set_page_config(page_title="BOM Approval", layout="wide")
 
 # 2. CONFIG
 H_N = "Bixapathi"
 H_D = "Head of Department (HOD)"
-B_D = "BOM Executive"
 T_C = "HOD APPROVAL"
 
 # 3. USERS
@@ -36,10 +35,10 @@ if not st.session_state.auth:
     st.stop()
 
 # 6. STYLE
-st.markdown("<style>.card { background: white; padding: 10px; border-left: 5px solid #1e40af; margin-bottom: 10px; } .sig { font-family: 'Brush Script MT', cursive; font-size: 22px; color: #1e40af; }</style>", unsafe_allow_html=True)
+st.markdown("<style>.card { background: white; padding: 15px; border-left: 10px solid #1e40af; margin-bottom: 15px; border-radius: 5px; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); } .sig { font-family: 'Brush Script MT', cursive; font-size: 24px; color: #1e40af; } th { background-color: #f1f5f9 !important; }</style>", unsafe_allow_html=True)
 
 # 7. DATA
-@st.cache_data(ttl=5)
+@st.cache_data(ttl=2)
 def load():
     s = "1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4"
     g = "466678125"
@@ -56,42 +55,48 @@ df = load()
 u_r = st.session_state.u.get("r", "")
 
 # 8. NAV
-m = st.sidebar.radio("NAV", ["🏠 APPR", "🏛️ LOG"])
-if st.sidebar.button("OUT"):
+m = st.sidebar.radio("NAV", ["🏠 PRICE APPROVALS", "🏛️ AUDIT LOG"])
+if st.sidebar.button("LOGOUT"):
     st.session_state.auth = False
     st.rerun()
 
-# 9. DASHBOARD
-if m == "🏠 APPR":
-    st.header("🏭 PRICE APPROVALS: BOM")
+# 9. DASHBOARD (TABLE FORMAT)
+if m == "🏠 PRICE APPROVALS":
+    st.header("🏭 PRICE APPROVALS FOR BOM ITEMS")
+    
     if not df.empty:
         if u_r == "HOD":
-            st.subheader("📝 REVIEW")
+            st.subheader("📋 PENDING APPROVAL TABLE")
             if T_C in df.columns:
-                p = df[df[T_C].isna()]
-                for i, r in p.iterrows():
-                    v = str(r.get('VENDOR NAME', 'N/A'))
-                    with st.expander("Review: " + v):
-                        st.write("Price: " + str(r.get('PRICE', '0')))
-                        t = st.text_input("Comment", key="c"+str(i))
-                        if st.button("OK", key="b"+str(i)):
-                            if t.upper() == "APPROVED":
-                                st.success("Signed: " + H_N)
-        else:
-            st.info("BOM VIEW: Waiting for HOD.")
-        st.divider()
-        st.dataframe(df, use_container_width=True)
+                # Get rows where HOD Approval is empty
+                p_df = df[df[T_C].isna() | (df[T_C].astype(str).str.strip() == "")]
+                
+                if p_df.empty:
+                    st.success("✅ All Items Processed")
+                else:
+                    # Create a manual table with columns
+                    h1, h2, h3, h4, h5 = st.columns([2, 2, 1, 2, 1])
+                    h1.write("**VENDOR**")
+                    h2.write("**PART NO**")
+                    h3.write("**PRICE**")
+                    h4.write("**HOD COMMENT**")
+                    h5.write("**ACTION**")
+                    st.divider()
 
-# 10. AUDIT LOG
-else:
-    st.header("📜 OFFICIAL AUDIT LOG")
-    if not df.empty and T_C in df.columns:
-        # Fixed logic for short lines
-        is_ok = df[T_C].astype(str).str.upper() == "APPROVED"
-        ok_df = df[is_ok]
-        if ok_df.empty:
-            st.info("No records.")
-        for _, r in ok_df.iterrows():
-            v = str(r.get('VENDOR NAME'))
-            ts = datetime.now().strftime('%Y-%m-%d %H:%M')
-            st
+                    for i, r in p_df.iterrows():
+                        c1, c2, c3, c4, c5 = st.columns([2, 2, 1, 2, 1])
+                        v = str(r.get('VENDOR NAME', 'N/A'))
+                        pn = str(r.get('PART NUMBER', 'N/A'))
+                        pr = str(r.get('PRICE', '0'))
+                        
+                        c1.write(v)
+                        c2.write(pn)
+                        c3.write(pr)
+                        cmt = c4.text_input("Comment", key=f"t{i}", label_visibility="collapsed")
+                        if c5.button("OK", key=f"b{i}"):
+                            if cmt.upper() == "APPROVED":
+                                st.success(f"Finalized: {v}")
+            else:
+                st.error("Column 'HOD APPROVAL' not found.")
+        
+        st.write("###
