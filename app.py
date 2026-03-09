@@ -71,4 +71,57 @@ if menu == "🏠 DASHBOARD":
     u_info = st.session_state.get('user', {})
     role_name = u_info.get('role', 'GUEST')
     
-    st.
+    st.markdown(f"<h1>🏭 {role_name} CONTROL CENTER</h1>", unsafe_allow_html=True)
+    
+    if not df.empty:
+        if role_name == "HOD":
+            st.subheader("🔔 PENDING HOD APPROVALS")
+            if 'HOD APPROVAL' in df.columns:
+                pending = df[df['HOD APPROVAL'].fillna('').eq('')]
+                if not pending.empty:
+                    for i, r in pending.iterrows():
+                        with st.expander(f"Review: {r.get('VENDOR NAME')} | {r.get('PART NUMBER')}"):
+                            st.write(f"**Price:** {r.get('PRICE')}")
+                            if st.button(f"APPROVE S.NO {r.get('S.NO')}", key=f"btn_{i}"):
+                                st.success(f"Approved by {u_info.get('name')}")
+                else:
+                    st.info("No records pending approval.")
+        
+        st.divider()
+        st.dataframe(df, use_container_width=True, hide_index=True)
+
+# 9. AUDIT LOG VIEW
+else:
+    st.markdown("<h1>📜 OFFICIAL AUDIT & APPROVAL TRAIL</h1>", unsafe_allow_html=True)
+    search = st.text_input("🔍 Search Vendor or Part Number").lower()
+    
+    if not df.empty and 'HOD APPROVAL' in df.columns:
+        approved = df[df['HOD APPROVAL'].fillna('').ne('')]
+        if search:
+            approved = approved[approved.astype(str).apply(lambda x: x.str.lower().str.contains(search)).any(axis=1)]
+
+        if approved.empty:
+            st.info("No records found.")
+        else:
+            u_info = st.session_state.get('user', {})
+            for _, r in approved.iterrows():
+                st.markdown(f"""
+                <div class="audit-card">
+                    <div style="display:flex; justify-content:space-between;">
+                        <b>S.NO: {r.get('S.NO')}</b>
+                        <b style="color:green;">✅ HOD VERIFIED</b>
+                    </div>
+                    <hr>
+                    <p><b>VENDOR:</b> {r.get('VENDOR NAME')} | <b>PART:</b> {r.get('PART NUMBER')} | <b>PRICE:</b> {r.get('PRICE')}</p>
+                    <table style="width:100%; margin-top:10px; border-top:1px dashed #ccc;">
+                        <tr>
+                            <td style="padding-top:10px;"><b>APPROVER:</b> {u_info.get('name')}</td>
+                            <td style="padding-top:10px;"><b>DESIGNATION:</b> {u_info.get('desig')}</td>
+                        </tr>
+                        <tr>
+                            <td><b>TIME:</b> {datetime.now().strftime('%Y-%m-%d %H:%M')}</td>
+                            <td class="sig-font">Signature: {u_info.get('name')}</td>
+                        </tr>
+                    </table>
+                </div>
+                """, unsafe_allow_html=True)
