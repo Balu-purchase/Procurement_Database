@@ -20,11 +20,13 @@ DB = {
  "bom_team": {"p": "BOM2026", "r": "BOM"}
 }
 
-# 4. SESSION
+# 4. SESSION & LOCAL LOG
 if "auth" not in st.session_state:
  st.session_state.auth = False
 if "u" not in st.session_state:
  st.session_state.u = {}
+if "local_log" not in st.session_state:
+ st.session_state.local_log = []
 
 # 5. LOGIN
 if not st.session_state.auth:
@@ -39,7 +41,7 @@ if not st.session_state.auth:
  st.stop()
 
 # 6. STYLE
-st.markdown("<style>.card { background: white; padding: 12px; border-left: 10px solid #1e40af; margin-bottom: 10px; } .sig { font-family: 'Brush Script MT', cursive; font-size: 22px; color: #1e40af; }</style>", unsafe_allow_html=True)
+st.markdown("<style>.card { background: white; padding: 12px; border-left: 10px solid #1e40af; margin-bottom: 10px; border-radius: 5px; box-shadow: 1px 1px 3px rgba(0,0,0,0.1); } .sig { font-family: 'Brush Script MT', cursive; font-size: 22px; color: #1e40af; }</style>", unsafe_allow_html=True)
 
 # 7. DATA
 @st.cache_data(ttl=2)
@@ -59,7 +61,7 @@ df = load()
 u_r = st.session_state.u.get("r", "")
 
 # 8. NAV
-m = st.sidebar.radio("NAV", ["APPROVALS", "LOG"])
+m = st.sidebar.radio("NAV", ["APPROVALS", "AUDIT LOG"])
 if st.sidebar.button("OUT"):
  st.session_state.auth = False
  st.rerun()
@@ -77,30 +79,41 @@ if m == "APPROVALS":
      pn = str(r.get(P_C))
      pr = str(r.get(R_C))
      st.write(f"**{vn}** | {pn} | {pr}")
-     t = st.text_input("CMT", key=f"t{i}")
+     t = st.text_input("Comment", key=f"t{i}")
      if st.button("OK", key=f"b{i}"):
       if t.upper() in ["APPROVED", "OK"]:
-       st.success("Approved: " + vn)
+       # Add to Local Log Memory
+       entry = {
+        "V": vn, "N": pn, "P": pr, 
+        "S": str(r.get(S_C, "N/A")), 
+        "T": datetime.now().strftime('%Y-%m-%d %H:%M')
+       }
+       st.session_state.local_log.append(entry)
+       st.success("Approved & Sent to Logs: " + vn)
   st.divider()
   st.dataframe(df)
 
 # 10. AUDIT LOG
 else:
  st.header("OFFICIAL AUDIT LOG")
- if not df.empty:
-  if T_C in df.columns:
-   mask = df[T_C].astype(str).str.upper()
-   is_ok = mask.isin(["APPROVED", "OK"])
-   ok_df = df[is_ok]
-   for _, r in ok_df.iterrows():
-    v = str(r.get(V_C))
-    n = str(r.get(P_C))
-    p = str(r.get(R_C))
-    s = str(r.get(S_C))
-    ts = datetime.now().strftime('%H-%M')
-    st.markdown(f"""<div class="card">
-    <b>VENDOR:</b> {v} | <b>PART:</b> {n}<br>
-    <b>PRICE:</b> {p} | <b>STATUS:</b> {s}<br><hr>
-    <b>APPROVER:</b> {H_N} | <b>DESIG:</b> {H_D}<br>
-    <b>TIME:</b> {ts} | <span class="sig">Sig: {H_N}</span>
-    </div>""", unsafe_allow_html=True)
+ 
+ # Show Items approved during this session
+ if st.session_state.local_log:
+  for r in st.session_state.local_log:
+   st.markdown(f"""<div class="card">
+   <b>VENDOR:</b> {r['V']} | <b>PART:</b> {r['N']}<br>
+   <b>PRICE:</b> {r['P']} | <b>STATUS:</b> {r['S']}<br><hr>
+   <b>APPROVER:</b> {H_N} | <b>DESIG:</b> {H_D}<br>
+   <b>TIME:</b> {r['T']} | <span class="sig">Sig: {H_N}</span>
+   </div>""", unsafe_allow_html=True)
+ 
+ # Also show items already marked in the Excel Sheet
+ if not df.empty and T_C in df.columns:
+  mask = df[T_C].astype(str).str.upper()
+  ok_df = df[mask.isin(["APPROVED", "OK"])]
+  for _, r in ok_df.iterrows():
+   st.markdown(f"""<div class="card">
+   <b>VENDOR:</b> {str(r.get(V_C))} | <b>PART:</b> {str(r.get(P_C))}<br>
+   <b>PRICE:</b> {str(r.get(R_C))} | <b>STATUS:</b> {str(r.get(S_C))}<br><hr>
+   <b>APPROVER:</b> {H_N} | <b>DESIG:</b> {H_D}<br>
+   <b>TIME:</b> EXCEL DATA | <span class="sig">Sig: {H_
