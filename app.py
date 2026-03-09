@@ -8,16 +8,12 @@ st.set_page_config(page_title="Audit Portal", layout="wide")
 # 2. USER DATABASE
 USER_DB = {
     "hod_office": {
-        "pass": "HOD789", 
-        "role": "HOD", 
-        "name": "Bixapathi", 
-        "desig": "Head of Department (HOD)"
+        "pass": "HOD789", "role": "HOD", 
+        "name": "Bixapathi", "desig": "Head of Department (HOD)"
     },
     "bom_team": {
-        "pass": "BOM2026", 
-        "role": "BOM", 
-        "name": "BOM Team", 
-        "desig": "Executive"
+        "pass": "BOM2026", "role": "BOM", 
+        "name": "BOM Team", "desig": "Executive"
     }
 }
 
@@ -54,18 +50,61 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 6. DATA LOADING (UPDATED WITH GID 466678125)
+# 6. DATA LOADING (FIXED SYNTAX & GID)
 @st.cache_data(ttl=10)
 def load_data():
-    SHEET_ID = "1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4"
-    GID_SHEET = "466678125" 
-    
-    # URL Construction for CSV Export
-    url = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/export?format=csv&gid=" + GID_SHEET
+    sid = "1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4"
+    gid = "466678125" 
+    url = "https://docs.google.com/spreadsheets/d/" + sid + "/export?format=csv&gid=" + gid
     
     try:
         data = pd.read_csv(url)
-        # Standardize column names: remove spaces and make UPPERCASE for matching
         data.columns = data.columns.str.strip().str.upper()
         return data
-    except Exception as
+    except Exception as e:
+        st.error("Connection Error: " + str(e))
+        return pd.DataFrame()
+
+df = load_data()
+u = st.session_state.u_info
+
+# 7. NAVIGATION
+menu = st.sidebar.radio("NAVIGATE", ["🏠 DASHBOARD", "🏛️ AUDIT LOG"])
+if st.sidebar.button("LOG OUT"):
+    st.session_state.auth = False
+    st.rerun()
+
+# 8. DASHBOARD
+if menu == "🏠 DASHBOARD":
+    st.markdown("<h1>🏭 " + u.get('role') + " CONTROL CENTER</h1>", unsafe_allow_html=True)
+    
+    if df.empty:
+        st.warning("⚠️ No data found. Ensure the Google Sheet is 'Public'.")
+    else:
+        if u.get('role') == "HOD":
+            st.subheader("🔔 PENDING APPROVALS")
+            col = "HOD APPROVAL"
+            if col in df.columns:
+                # Filter for rows where HOD APPROVAL is empty
+                pending = df[df[col].isna()]
+                if pending.empty:
+                    st.success("🎉 All entries are approved!")
+                else:
+                    for i, r in pending.iterrows():
+                        v_name = str(r.get('VENDOR NAME', 'Row ' + str(i)))
+                        with st.expander("Review: " + v_name):
+                            st.write("**Price:** " + str(r.get('PRICE', 'N/A')))
+                            if st.button("APPROVE " + str(i), key="b"+str(i)):
+                                st.success("Verified by " + u.get('name'))
+            else:
+                st.info("Header 'HOD APPROVAL' not found in Sheet.")
+        
+        st.divider()
+        st.dataframe(df, use_container_width=True, hide_index=True)
+
+# 9. AUDIT LOG (BIXAPATHI SIGNATURE & DESIGNATION)
+else:
+    st.markdown("<h1>📜 OFFICIAL AUDIT LOG</h1>", unsafe_allow_html=True)
+    
+    col = "HOD APPROVAL"
+    if not df
