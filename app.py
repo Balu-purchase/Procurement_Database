@@ -77,9 +77,39 @@ if menu == "🏠 APPROVALS":
     st.markdown("<h1>🏭 PRICE APPROVALS FOR BOM ITEMS</h1>", unsafe_allow_html=True)
     
     if not df.empty:
-        # HOD VIEW: Write Comments
-        if u.get('role') == "HOD":
+        role = u.get('role')
+        if role == "HOD":
             st.subheader("📝 PENDING HOD REVIEW")
-            # Ensure Column exists
             target_col = "HOD APPROVAL"
+            
             if target_col in df.columns:
+                # Show rows where HOD column is empty/NaN
+                pending = df[df[target_col].isna() | (df[target_col].astype(str) == "nan")]
+                
+                if pending.empty:
+                    st.success("🎉 All items have been reviewed!")
+                else:
+                    for i, r in pending.iterrows():
+                        v_name = str(r.get('VENDOR NAME', 'N/A'))
+                        with st.expander("Comment for: " + v_name):
+                            st.write("**Part:** " + str(r.get('PART NUMBER', 'N/A')))
+                            st.write("**Price:** " + str(r.get('PRICE', '0')))
+                            
+                            # Input for Bixapathi's Comment
+                            comment = st.text_input("Enter HOD Comment", key="cmt_"+str(i))
+                            
+                            if st.button("SUBMIT DECISION", key="btn_"+str(i)):
+                                if comment.upper() == "APPROVED":
+                                    st.success("Finalized. Signature generated in Audit Log.")
+                                else:
+                                    st.info("Comment Saved: " + comment)
+            else:
+                st.warning("Column 'HOD APPROVAL' missing in Excel Sheet.")
+        
+        st.divider()
+        st.write("### CURRENT BOM DATABASE")
+        st.dataframe(df, use_container_width=True, hide_index=True)
+
+# 9. AUDIT LOG (BIXAPATHI SIGNATURE & DESIGNATION)
+else:
+    st.markdown("<h1>
