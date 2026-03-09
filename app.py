@@ -3,77 +3,54 @@ import pandas as pd
 from datetime import datetime
 import time
 
-# 1. INITIAL CONFIG
+# 1. PAGE SETUP
 st.set_page_config(page_title="SKYQUAD", layout="wide")
 
-# 2. SESSION MEMORY (Prevents Logout on Refresh)
-if "auth_status" not in st.session_state:
-    st.session_state.auth_status = False
+# 2. SESSION MEMORY (Prevents Logout)
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
 
-# 3. GOOGLE SHEETS LINK
-# Your specific Sheet ID
-SHEET_ID = "1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4"
-SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
+# 3. LIVE DATA LINK
+# This links directly to your spreadsheet ID
+SID = "1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4"
+URL = f"https://docs.google.com/spreadsheets/d/{SID}/export?format=csv"
 
-# 4. STYLING (High Contrast for Visibility)
+# 4. HIGH-CONTRAST STYLE
 st.markdown("""
     <style>
     .stApp { background-color: #0f172a; }
     h1, h2, h3, p, span, label, .stMetric { 
-        color: #ffffff !important; 
+        color: white !important; 
         font-weight: bold !important;
-        text-shadow: 2px 2px 4px #000000;
+        text-shadow: 2px 2px 5px black;
     }
     .stDataFrame { 
-        background-color: rgba(0,0,0,0.6); 
-        border: 1px solid #38bdf8; 
+        background-color: rgba(0,0,0,0.8) !important; 
+        border: 2px solid #38bdf8; 
     }
     </style>
     """, unsafe_allow_html=True)
 
 # 5. ACCESS KEYS
-USER_KEYS = {
-    "BOM Team": "BOM2026",
-    "Non-BOM Team": "NBOM2026",
-    "GM Management": "GM789"
-}
+KEYS = {"BOM Team": "BOM2026", "Non-BOM Team": "NBOM2026", "GM Management": "GM789"}
 
 # 6. APP LOGIC
-if not st.session_state.auth_status:
+if not st.session_state.logged_in:
     # --- LOGIN SCREEN ---
-    st.markdown("<h1>🔐 SKYQUAD LOGIN</h1>", unsafe_allow_html=True)
+    st.markdown("<h1>🔐 SKYQUAD SECURITY ACCESS</h1>", unsafe_allow_html=True)
     
-    role = st.selectbox("OPERATIONAL ROLE", list(USER_KEYS.keys()))
+    role = st.selectbox("OPERATIONAL ROLE", list(KEYS.keys()))
     pwd = st.text_input("SECURITY PASSKEY", type="password")
     
-    if st.button("AUTHORIZE ACCESS"):
-        if pwd == USER_KEYS.get(role):
-            st.session_state.auth_status = True
+    if st.button("AUTHORIZE"):
+        if pwd == KEYS.get(role):
+            st.session_state.logged_in = True
             st.rerun()
         else:
-            st.error("Invalid Passkey")
+            st.error("Invalid Key")
 
 else:
     # --- AUTHORIZED DASHBOARD ---
-    # Refresh logic only runs here to prevent kicking user to login
+    # Refresh logic only runs here so you stay logged in
     
-    with st.sidebar:
-        st.markdown("### SYSTEM STATUS")
-        st.write("🟢 LIVE SYNC ACTIVE")
-        if st.button("LOGOUT / RESET"):
-            st.session_state.auth_status = False
-            st.rerun()
-
-    # THE DATA BLOCK (Correctly aligned try/except)
-    try:
-        # Pull fresh data from Google Sheets
-        df = pd.read_csv(SHEET_URL)
-        
-        st.markdown("<h1>🚀 SKYQUAD COMMAND CENTER</h1>", unsafe_allow_html=True)
-        
-        # Display Metrics
-        col1, col2 = st.columns(2)
-        col1.metric("Total Records", len(df))
-        
-        # Create Time String separately to avoid syntax errors
-        current_time = datetime.now().strftime("%H:%M
+    with st.sidebar
