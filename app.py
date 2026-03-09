@@ -16,38 +16,42 @@ else:
     try:
         # --- 2. LOAD DATA ---
         url = "https://docs.google.com/spreadsheets/d/1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4/export?format=csv"
+        # Reading data and ensuring no duplicate column names crash the app
         df = pd.read_csv(url)
-        
-        # CLEAN ALL HEADERS (Removes spaces and converts to lowercase for searching)
         df.columns = df.columns.str.strip()
-        header_map = {col.lower(): col for col in df.columns}
+        
+        # This fix handles the "1-dimensional" error by picking only unique columns
+        df = df.loc[:, ~df.columns.duplicated()]
 
         st.markdown("<h2 style='text-align: center;'>PURCHASE NONBOM DAILY TRACKING REPORT</h2>", unsafe_allow_html=True)
 
-        # --- 3. DYNAMIC COLUMN FINDER ---
-        # This finds your columns even if you renamed them slightly
-        plant_col = header_map.get('plant')
-        pr_col = header_map.get('pr receipt')
-        po_col = header_map.get('po done')
+        # --- 3. THE CALCULATION ---
+        # Look for the columns exactly as they appear in your Excel
+        p_col = 'Plant'
+        pr_col = 'PR Receipt'
+        po_col = 'PO Done'
 
-        if plant_col and pr_col and po_col:
-            # Create the Summary (One row per Plant)
-            # Count PRs and Count POs that are NOT empty
-            summary = df.groupby(plant_col).agg(
+        if p_col in df.columns and pr_col in df.columns:
+            st.markdown("### 📊 SUMMARY REPORT")
+            
+            # Grouping and Counting
+            # We count PR Receipt to get total rows per plant
+            # We count PO Done to see how many are completed
+            summary = df.groupby(p_col).agg(
                 PR_COUNT=(pr_col, 'count'),
-                PO_COUNT=(po_col, 'count')
+                PO_COUNT=(po_col, 'count') if po_col in df.columns else (pr_col, lambda x: 0)
             ).reset_index()
 
-            # Logic: Balance = Total PRs - POs Done
+            # Calculate Balance
             summary['BALANCE'] = summary['PR_COUNT'] - summary['PO_COUNT']
 
-            # Add Serial Number
+            # Add S.NO
             summary.insert(0, 'S.NO', range(1, len(summary) + 1))
             
-            # Formatting for the table
+            # Rename for display
             summary.columns = ['S.NO', 'PLANT', 'PR RECEIPT', 'PO DONE', 'BALANCE PR']
 
-            # Add Total Row
+            # Add Grand Total Row
             total_row = pd.DataFrame([[
                 '', 'TOTAL', 
                 summary['PR RECEIPT'].sum(), 
@@ -56,16 +60,12 @@ else:
             ]], columns=summary.columns)
 
             final_summary = pd.concat([summary, total_row], ignore_index=True)
-
-            st.markdown("### 📊 SUMMARY REPORT")
             st.table(final_summary)
+            
         else:
-            # If columns are missing, show the user what names ARE in the Excel
-            st.error("❌ COLUMN NAMES NOT MATCHING")
-            st.write("Your Excel currently has these headers:", list(df.columns))
-            st.info("Please ensure headers are: **Plant**, **PR Receipt**, and **PO Done**")
+            st.error(f"Missing Columns! Found: {list(df.columns)}")
 
-        # --- 4. DETAILED DATA ---
+        # --- 4. DETAILED LIST ---
         st.divider()
         st.markdown("### 📂 DETAILED DATA LIST")
         st.dataframe(df, use_container_width=True, hide_index=True)
@@ -74,6 +74,6 @@ else:
         st.rerun()
 
     except Exception as e:
-        st.error(f"Updating Data... {e}")
+        st.error(f"Syncing... {e}")
         time.sleep(5)
         st.rerun()
