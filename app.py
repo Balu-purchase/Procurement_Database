@@ -2,63 +2,86 @@ import streamlit as st
 import pandas as pd
 import time
 
-# --- 1. PAGE SETUP ---
-st.set_page_config(page_title="Purchase Tracking Report", layout="wide")
+# --- 1. SETUP ---
+st.set_page_config(page_title="Purchase Tracking", layout="wide")
 
-# --- 2. SESSION MEMORY ---
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
-# --- 3. LIVE DATABASE LINK ---
-# Ensure your Google Sheet is shared as "Anyone with link can view"
-SID = "1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4"
-URL = f"https://docs.google.com/spreadsheets/d/{SID}/export?format=csv"
+# --- 2. DATA SOURCE ---
+SHEET_ID = "1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4"
+URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
-# --- 4. ACCESS KEYS ---
+# --- 3. ACCESS KEYS ---
 KEYS = {"BOM Team": "BOM2026", "Non-BOM Team": "NBOM2026", "GM Management": "GM789"}
 
-# --- 5. APP LOGIC ---
+# --- 4. MAIN APP ---
 if not st.session_state.logged_in:
-    # --- LOGIN SCREEN ---
     st.title("🔐 SECURITY ACCESS")
-    role = st.selectbox("OPERATIONAL ROLE", list(KEYS.keys()))
-    pwd = st.text_input("SECURITY PASSKEY", type="password")
+    role = st.selectbox("ROLE", list(KEYS.keys()))
+    pwd = st.text_input("PASSKEY", type="password")
     if st.button("AUTHORIZE"):
         if pwd == KEYS.get(role):
             st.session_state.logged_in = True
             st.rerun()
         else:
-            st.error("Invalid Passkey")
+            st.error("Invalid Key")
 else:
-    # --- AUTHORIZED DASHBOARD ---
+    # Sidebar for logout
     with st.sidebar:
-        st.success("SYSTEM LIVE")
         if st.button("LOGOUT"):
             st.session_state.logged_in = False
             st.rerun()
 
+    # DATA PROCESSING BLOCK
     try:
-        # Load Data from Google Sheets
         df = pd.read_csv(URL)
-        
         st.header("PURCHASE NONBOM DAILY TRACKING REPORT")
         
-        # --- 6. SUMMARY REPORT SECTION ---
-        # Required columns for the summary table
-        cols = ['Plant', 'PR Receipt', 'PO Done', 'Balance PR']
+        # --- SUMMARY SECTION ---
+        # Columns must be exactly: 'Plant', 'PR Receipt', 'PO Done', 'Balance PR'
+        target_cols = ['Plant', 'PR Receipt', 'PO Done', 'Balance PR']
         
-        if all(c in df.columns for c in cols):
+        if all(col in df.columns for col in target_cols):
             st.subheader("📊 Summary Report (Plant-wise)")
             
-            # Convert columns to numbers (handling errors)
-            temp_df = df.copy()
+            # Clean data: convert to numbers
+            work_df = df.copy()
             for c in ['PR Receipt', 'PO Done', 'Balance PR']:
-                temp_df[c] = pd.to_numeric(temp_df[c], errors='coerce').fillna(0)
+                work_df[c] = pd.to_numeric(work_df[c], errors='coerce').fillna(0)
             
-            # Group by Plant and Sum
-            summary = temp_df.groupby('Plant')[['PR Receipt', 'PO Done', 'Balance PR']].sum().reset_index()
+            # Create the Summary Table
+            summary = work_df.groupby('Plant')[['PR Receipt', 'PO Done', 'Balance PR']].sum().reset_index()
             
-            # Add Total Row
-            totals = summary[['PR Receipt', 'PO Done', 'Balance PR']].sum()
-            total_row = pd.DataFrame([['TOTAL', totals[0], totals[1], totals[2]]], columns=cols)
-            final_summary
+            # Calculate Totals for the bottom row
+            t_pr = summary['PR Receipt'].sum()
+            t_po = summary['PO Done'].sum()
+            t_bal = summary['Balance PR'].sum()
+            
+            # Append Total row
+            total_data = pd.DataFrame([['TOTAL', t_pr, t_po, t_bal]], columns=target_cols)
+            final_table = pd.concat([summary, total_data], ignore_index=True)
+            
+            # Display as static table
+            st.table(final_table)
+        else:
+            st.warning("Ensure Excel has columns: Plant, PR Receipt, PO Done, Balance PR")
+
+        st.divider()
+        
+        # --- FULL DATA SECTION ---
+        st.subheader("📂 Detailed Tracking Data")
+        search = st.text_input("SEARCH DATABASE")
+        if search:
+            df = df[df.astype(str).apply(lambda x: x.str.contains(search, case=False)).any(axis=1)]
+        
+        st.dataframe(df, use_container_width=True, hide_index=True)
+
+        # AUTO-REFRESH (Every 20 seconds)
+        time.sleep(20)
+        st.rerun()
+
+    except Exception as e:
+        st.error(f"Sync Error: {e}")
+        time.sleep(5)
+        st.rerun()
