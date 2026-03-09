@@ -2,62 +2,74 @@ import streamlit as st
 import pandas as pd
 
 # 1. PAGE SETUP
-st.set_page_config(page_title="Executive Procurement Summary", layout="wide")
+st.set_page_config(page_title="Executive Procurement Portal", layout="wide")
 
-# 2. PROFESSIONAL 3D INDUSTRIAL BACKGROUND (STABLE IMAGE)
-# Using a high-quality 3D industrial render as a background
+# 2. USER DATABASE (Recognized Users Only)
+USER_DB = {
+    "management_01": "MGMT2026",
+    "admin_procure": "ADMIN789",
+    "procure_team": "NBOM2026"
+}
+
+# 3. BACKGROUND & STYLING (Professional Industrial Look)
 bg_img = "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=2070&auto=format&fit=crop"
 
 st.markdown(f"""
     <style>
     .stApp {{
-        background-image: linear-gradient(rgba(255,255,255,0.8), rgba(255,255,255,0.8)), url("{bg_img}");
+        background-image: linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)), url("{bg_img}");
         background-size: cover;
-        background-position: center;
         background-attachment: fixed;
     }}
-    /* Summary Table: Modern 'Glass' Look */
+    /* Side-Bar Login Styling */
+    section[data-testid="stSidebar"] {{
+        background-color: #1e293b !important;
+        color: white;
+    }}
     .stTable {{
         width: auto !important;
-        margin-left: auto;
-        margin-right: auto;
-        background-color: rgba(255, 255, 255, 0.9) !important;
-        border-radius: 15px;
-        border: 1px solid #e2e8f0;
+        margin-left: auto; margin-right: auto;
+        background-color: white !important;
+        border-radius: 12px;
         box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     }}
-    h1 {{
-        color: #1e293b;
-        text-align: center;
-        font-family: 'Segoe UI', sans-serif;
-        font-weight: 800;
-        padding: 20px;
-    }}
+    h1 {{ color: #0F172A; text-align: center; font-weight: 800; }}
     </style>
     """, unsafe_allow_html=True)
 
-if "auth" not in st.session_state:
-    st.session_state.auth = False
+# 4. SIDEBAR LOGIN SYSTEM
+st.sidebar.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=100)
+st.sidebar.title("🔐 USER ACCESS")
 
-# 3. LOGIN GATEWAY
-if not st.session_state.auth:
-    st.markdown("<h1>🔐 PROCUREMENT GATEWAY</h1>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1,1,1])
-    with col2:
-        pwd = st.text_input("MANAGEMENT KEY", type="password")
-        if st.button("AUTHORIZE", use_container_width=True):
-            if pwd in ["BOM2026", "NBOM2026", "GM789"]:
-                st.session_state.auth = True
-                st.rerun()
-            else:
-                st.error("Invalid Key")
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+    st.session_state.user = ""
 
-# 4. MAIN DASHBOARD
+if not st.session_state.authenticated:
+    user_input = st.sidebar.text_input("USER ID")
+    pass_input = st.sidebar.text_input("PASSWORD", type="password")
+    
+    if st.sidebar.button("LOG IN", use_container_width=True):
+        if user_input in USER_DB and USER_DB[user_input] == pass_input:
+            st.session_state.authenticated = True
+            st.session_state.user = user_input
+            st.rerun()
+        else:
+            st.sidebar.error("❌ Invalid User or Password")
+    
+    st.warning("Please Log In via the sidebar to access the Procurement Database.")
+    st.info("System Status: Restricted Access")
+
+# 5. MAIN DASHBOARD (Only visible after Login)
 else:
+    st.sidebar.success(f"Logged in as: {st.session_state.user.upper()}")
+    if st.sidebar.button("LOG OUT"):
+        st.session_state.authenticated = False
+        st.rerun()
+
     st.markdown("<h1>🏭 PURCHASE NONBOM DAILY TRACKING REPORT</h1>", unsafe_allow_html=True)
     
-    # Refresh Button
-    if st.sidebar.button("🔄 REFRESH DATA"):
+    if st.sidebar.button("🔄 REFRESH DATABASE"):
         st.rerun()
 
     try:
@@ -67,11 +79,11 @@ else:
         df.columns = df.columns.str.strip()
         df = df.loc[:, ~df.columns.duplicated()]
 
-        # --- SUMMARY SECTION ---
+        # --- EXECUTIVE SUMMARY ---
         st.markdown("<h3 style='text-align:center;'>📊 STRATEGIC PLANT SUMMARY</h3>", unsafe_allow_html=True)
         
         if 'PLANT' in df.columns:
-            # Grouping Logic
+            # Calculation
             sm = df.groupby('PLANT').agg(
                 PR_REC=('PR RECEIPT', 'count'),
                 PO_DN=('PO DONE', 'count')
@@ -79,20 +91,3 @@ else:
 
             sm['BALANCED PR'] = sm['PR_REC'] - sm['PO_DN']
             sm.insert(0, 'S.NO', range(1, len(sm) + 1))
-            sm.columns = ['S.NO', 'PLANT', 'PR RECEIPT', 'PO DONE', 'BALANCED PR']
-
-            # Calculate Totals
-            t1, t2, t3 = sm['PR RECEIPT'].sum(), sm['PO DONE'].sum(), sm['BALANCED PR'].sum()
-            tr = pd.DataFrame([['', 'TOTAL', t1, t2, t3]], columns=sm.columns)
-
-            # Display the Table
-            st.table(pd.concat([sm, tr], ignore_index=True))
-        
-        # --- DETAILED DATA ---
-        st.divider()
-        st.markdown("<h3 style='text-align:center;'>📂 DETAILED DATA REPORT</h3>", unsafe_allow_html=True)
-        st.dataframe(df, use_container_width=True, hide_index=True)
-
-    except Exception as e:
-        st.error("⚠️ System Syncing... Please wait.")
-        st.stop()
