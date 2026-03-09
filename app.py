@@ -38,17 +38,7 @@ if not st.session_state.auth:
     st.stop()
 
 # 5. STYLING
-st.markdown("""
-<style>
-    .audit-card { 
-        background: white; padding: 20px; border-radius: 10px; 
-        border-left: 8px solid #1e40af; box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
-        margin-bottom: 15px;
-    }
-    .sig-font { font-family: 'Brush Script MT', cursive; font-size: 26px; color: #1e40af; }
-    h1 { text-align: center; color: #1e40af; font-weight: bold; }
-</style>
-""", unsafe_allow_html=True)
+st.markdown("<style>.audit-card { background: white; padding: 20px; border-radius: 10px; border-left: 8px solid #1e40af; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px; } .sig-font { font-family: 'Brush Script MT', cursive; font-size: 26px; color: #1e40af; } h1 { text-align: center; color: #1e40af; font-weight: bold; }</style>", unsafe_allow_html=True)
 
 # 6. DATA LOADING (GID 466678125)
 @st.cache_data(ttl=5)
@@ -80,36 +70,28 @@ if menu == "🏠 APPROVALS":
         role = u.get('role')
         if role == "HOD":
             st.subheader("📝 PENDING HOD REVIEW")
-            target_col = "HOD APPROVAL"
-            
-            if target_col in df.columns:
-                # Show rows where HOD column is empty/NaN
-                pending = df[df[target_col].isna() | (df[target_col].astype(str) == "nan")]
+            col = "HOD APPROVAL"
+            if col in df.columns:
+                # Filter for rows where HOD column is empty
+                mask = df[col].isna() | (df[col].astype(str).str.strip() == "")
+                pending = df[mask]
                 
                 if pending.empty:
                     st.success("🎉 All items have been reviewed!")
                 else:
                     for i, r in pending.iterrows():
                         v_name = str(r.get('VENDOR NAME', 'N/A'))
-                        with st.expander("Comment for: " + v_name):
-                            st.write("**Part:** " + str(r.get('PART NUMBER', 'N/A')))
+                        with st.expander("Review: " + v_name):
                             st.write("**Price:** " + str(r.get('PRICE', '0')))
-                            
-                            # Input for Bixapathi's Comment
-                            comment = st.text_input("Enter HOD Comment", key="cmt_"+str(i))
-                            
-                            if st.button("SUBMIT DECISION", key="btn_"+str(i)):
+                            comment = st.text_input("HOD Comment", key="c_"+str(i))
+                            if st.button("SUBMIT", key="b_"+str(i)):
                                 if comment.upper() == "APPROVED":
-                                    st.success("Finalized. Signature generated in Audit Log.")
+                                    st.success("Record signed by Bixapathi.")
                                 else:
-                                    st.info("Comment Saved: " + comment)
+                                    st.info("Comment noted: " + comment)
             else:
-                st.warning("Column 'HOD APPROVAL' missing in Excel Sheet.")
+                st.warning("Column 'HOD APPROVAL' not found in Sheet.")
         
         st.divider()
         st.write("### CURRENT BOM DATABASE")
-        st.dataframe(df, use_container_width=True, hide_index=True)
-
-# 9. AUDIT LOG (BIXAPATHI SIGNATURE & DESIGNATION)
-else:
-    st.markdown("<h1>
+        st.dataframe(df, use_container_width=True, hide_
