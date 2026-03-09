@@ -13,55 +13,53 @@ if not st.session_state.auth:
             st.session_state.auth = True
             st.rerun()
 else:
-    # --- 2. DATA PROCESSING ---
     try:
+        # --- 2. LOAD DATA ---
         url = "https://docs.google.com/spreadsheets/d/1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4/export?format=csv"
         df = pd.read_csv(url)
-        df.columns = df.columns.str.strip() # Clean column headers
+        df.columns = df.columns.str.strip() # Clean column names
 
         st.markdown("<h1 style='text-align:center;'>PURCHASE NONBOM DAILY TRACKING REPORT</h1>", unsafe_allow_html=True)
 
-        # --- 3. SUMMARY REPORT SECTION ---
+        # --- 3. SMALL SUMMARY TABLE (Top Section) ---
         st.subheader("📊 SUMMARY REPORT")
         
-        # We use the exact headers found in your Excel: PLANT, PR RECEIPT, PO DONE
         if 'PLANT' in df.columns:
-            # Group by Plant and count occurrences
+            # This "collects" data from the detailed list below
+            # Count PRs and Count non-empty PO entries
             summary = df.groupby('PLANT').agg(
-                PR_RECEIPT=('PR RECEIPT', 'count'),
-                PO_DONE=('PO DONE', 'count')
+                PR_REC=('PR RECEIPT', 'count'),
+                PO_DN=('PO DONE', 'count')
             ).reset_index()
 
-            # Logic: Balance = Total PRs - POs Finished
-            summary['BALANCED PR'] = summary['PR_RECEIPT'] - summary['PO_DONE']
+            # Calculation: Balance = PR - PO
+            summary['BALANCED PR'] = summary['PR_REC'] - summary['PO_DN']
             
-            # Add Serial Number
+            # Add S.NO
             summary.insert(0, 'S.NO', range(1, len(summary) + 1))
+            summary.columns = ['S.NO', 'PLANT', 'PR RECEIPT', 'PO DONE', 'BALANCED PR']
 
-            # Add Total Row
+            # Add TOTAL row at the bottom of the summary
             total_row = pd.DataFrame([[
                 '', 'TOTAL', 
-                summary['PR_RECEIPT'].sum(), 
-                summary['PO_DONE'].sum(), 
+                summary['PR RECEIPT'].sum(), 
+                summary['PO DONE'].sum(), 
                 summary['BALANCED PR'].sum()
-            ]], columns=['S.NO', 'PLANT', 'PR_RECEIPT', 'PO_DONE', 'BALANCED PR'])
+            ]], columns=summary.columns)
 
-            # Combine and Display
-            final_table = pd.concat([summary, total_row], ignore_index=True)
-            st.table(final_table)
+            st.table(pd.concat([summary, total_row], ignore_index=True))
         else:
-            st.error("Missing 'PLANT' column in Google Sheet.")
+            st.error("Column 'PLANT' not found in Excel.")
 
-        # --- 4. DETAILED DATA SECTION ---
+        # --- 4. DETAILED DATA REPORT (Bottom Section) ---
         st.divider()
-        st.subheader("📂 DETAILED DATA LIST")
+        st.subheader("📂 DETAILED DATA REPORT")
         st.dataframe(df, use_container_width=True, hide_index=True)
 
-        # --- 5. REFRESH ---
+        # --- 5. AUTO-REFRESH (15 Seconds) ---
         time.sleep(15)
         st.rerun()
 
     except Exception as e:
-        st.warning("🔄 Syncing latest data from Google Sheets...")
+        st.info("🔄 Syncing latest data from Google Sheets...")
         time.sleep(5)
-        st.rerun()
