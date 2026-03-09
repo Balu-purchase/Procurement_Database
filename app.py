@@ -54,10 +54,41 @@ def load_data():
         return pd.DataFrame()
 
 df = load_data()
-# SAFE USER ACCESS
 u = st.session_state.get("u_info", {})
 u_role = u.get("role", "GUEST")
 
-# 8. NAVIGATION
+# 8. NAVIGATION & LOGOUT (FIXED INDENTATION)
 menu = st.sidebar.radio("NAV", ["🏠 APPROVALS", "🏛️ AUDIT LOG"])
+
 if st.sidebar.button("LOG OUT"):
+    st.session_state.auth = False
+    st.session_state.u_info = {}
+    st.rerun()
+
+# 9. DASHBOARD
+if menu == "🏠 APPROVALS":
+    st.header("🏭 PRICE APPROVALS FOR BOM ITEMS")
+    if not df.empty:
+        if u_role == "HOD":
+            st.subheader("📝 PENDING HOD REVIEW")
+            if T_COL in df.columns:
+                pend = df[df[T_COL].isna()]
+                for i, r in pend.iterrows():
+                    v = str(r.get('VENDOR NAME', 'N/A'))
+                    with st.expander("Review: " + v):
+                        st.write("Price: " + str(r.get('PRICE', '0')))
+                        txt = st.text_input("Comment", key="c"+str(i))
+                        if st.button("SUBMIT", key="b"+str(i)):
+                            if txt.upper() == "APPROVED":
+                                st.success("Signed by " + H_NAME)
+        else:
+            st.info("BOM VIEW: Waiting for HOD.")
+        st.divider()
+        st.dataframe(df, use_container_width=True)
+
+# 10. AUDIT LOG
+else:
+    st.header("📜 OFFICIAL AUDIT LOG")
+    if not df.empty and T_COL in df.columns:
+        # Show items where HOD column is "APPROVED"
+        appr = df[df
