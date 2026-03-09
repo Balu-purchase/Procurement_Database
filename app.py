@@ -1,26 +1,24 @@
 import streamlit as st
 import pandas as pd
-import io
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Resolute Procurement Portal", layout="wide")
 
-# --- SESSION STATE ---
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-if "data" not in st.session_state:
-    st.session_state.data = None
-
 # --- LOGIN SYSTEM ---
-if not st.session_state.authenticated:
+if "auth" not in st.session_state:
+    st.session_state.auth = False
+
+if not st.session_state.auth:
     st.sidebar.title("🔐 Secure Access")
-    role = st.sidebar.selectbox("Select Your Team", ["BOM Team", "Non-BOM Team", "GM Management"])
-    pwd = st.sidebar.text_input("Enter Team Passkey", type="password")
+    role = st.sidebar.selectbox("Select Team", ["BOM Team", "Non-BOM Team", "GM Management"])
+    pwd = st.sidebar.text_input("Passkey", type="password")
     
     if st.sidebar.button("Login"):
-        creds = {"BOM Team": "BOM2026", "Non-BOM Team": "NBOM2026", "GM Management": "GM789"}
-        if pwd == creds.get(role):
-            st.session_state.authenticated = True
+        # Match your existing passwords
+        if (role == "BOM Team" and pwd == "BOM2026") or \
+           (role == "Non-BOM Team" and pwd == "NBOM2026") or \
+           (role == "GM Management" and pwd == "GM789"):
+            st.session_state.auth = True
             st.session_state.role = role
             st.rerun()
         else:
@@ -28,33 +26,28 @@ if not st.session_state.authenticated:
 
 # --- MAIN DASHBOARD ---
 else:
-    st.sidebar.success(f"Logged in: {st.session_state.role}")
+    st.title("🏭 Daily Procurement Tracking")
+    st.sidebar.success(f"Role: {st.session_state.role}")
+    
+    # Logout button
     if st.sidebar.button("Logout"):
-        st.session_state.authenticated = False
-        st.session_state.data = None
+        st.session_state.auth = False
         st.rerun()
 
-    st.title("🏭 Daily Procurement Tracking")
-    
-    if st.session_state.data is None:
-        st.info("👋 Welcome! Please upload the 'Procurement_Database.xlsx' file.")
-        uploaded_file = st.file_uploader("Upload Excel File", type=["xlsx"])
-        
-        if uploaded_file:
-            try:
-                # Load the data
-                st.session_state.data = pd.read_excel(uploaded_file, engine='openpyxl')
-                st.success("✅ Database Loaded!")
-                st.rerun()
-            except ImportError:
-                st.error("🚨 Missing Dependency: Please run 'pip install openpyxl' in your terminal.")
-            except Exception as e:
-                st.error(f"Error reading file: {e}")
-    
-    else:
-        df = st.session_state.data
-        st.subheader("Live Tracking Data")
-        st.dataframe(df, use_container_width=True, hide_index=True)
+    # --- STEP: UPLOAD CSV ---
+    st.info("Please upload your 'Procurement_Database.csv' file below.")
+    uploaded_file = st.file_uploader("Upload CSV File", type=["csv"])
 
-st.markdown("---")
-st.caption("Resolute Electronics v2.1")
+    if uploaded_file is not None:
+        # read_csv DOES NOT require openpyxl or any extra installs
+        df = pd.read_csv(uploaded_file)
+        
+        # Search Filter
+        search = st.text_input("🔍 Search Database")
+        if search:
+            df = df[df.astype(str).apply(lambda x: x.str.contains(search, case=False)).any(axis=1)]
+            
+        st.subheader("Live Data")
+        st.dataframe(df, use_container_width=True)
+    else:
+        st.warning("Waiting for file upload...")
