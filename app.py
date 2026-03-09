@@ -21,7 +21,13 @@ USER_DB = {
     }
 }
 
-# 3. PROFESSIONAL STYLING
+# 3. INITIALIZE SESSION STATE (Prevents AttributeErrors)
+if "auth" not in st.session_state:
+    st.session_state.auth = False
+if "user" not in st.session_state:
+    st.session_state.user = None
+
+# 4. PROFESSIONAL STYLING (Triple-quoted to prevent Syntax Errors)
 st.markdown("""
 <style>
     .stApp { background-color: #f8fafc; }
@@ -34,12 +40,6 @@ st.markdown("""
     h1 { text-align: center; color: #0f172a; font-weight: 800; border-bottom: 2px solid #1e40af; }
 </style>
 """, unsafe_allow_html=True)
-
-# 4. INITIALIZE SESSION STATE (Prevents AttributeError)
-if "auth" not in st.session_state:
-    st.session_state.auth = False
-if "user" not in st.session_state:
-    st.session_state.user = None
 
 # 5. SIDEBAR LOGIN
 st.sidebar.title("🔐 ACCESS CONTROL")
@@ -54,10 +54,9 @@ if not st.session_state.auth:
             st.rerun()
         else:
             st.sidebar.error("❌ Invalid ID or Password")
-    st.warning("Please log in to access the system.")
-    st.stop() # Force stop here so code below doesn't run without a user
+    st.stop()
 
-# 6. NAVIGATION & LOGOUT (Only reachable if auth is True)
+# 6. NAVIGATION & LOGOUT
 menu = st.sidebar.radio("NAVIGATE", ["🏠 DASHBOARD", "🏛️ AUDIT LOG"])
 if st.sidebar.button("LOG OUT"):
     st.session_state.auth = False
@@ -65,20 +64,27 @@ if st.sidebar.button("LOG OUT"):
     st.rerun()
 
 # 7. DATA LOADING
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=30)
 def load_data():
+    # URL for BOM Team Sheet (GID 2061093150)
     url = "https://docs.google.com/spreadsheets/d/1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4/export?format=csv&gid=2061093150"
     try:
-        df = pd.read_csv(url)
-        df.columns = df.columns.str.strip()
-        return df
-    except:
+        data = pd.read_csv(url)
+        data.columns = data.columns.str.strip()
+        return data
+    except Exception:
         return pd.DataFrame()
 
 df = load_data()
 
 # 8. DASHBOARD VIEW
 if menu == "🏠 DASHBOARD":
-    # Safe access to session_state.user
-    role = st.session_state.user['role']
-    st.markdown(
+    curr_user = st.session_state.user
+    st.markdown(f"<h1>🏭 {curr_user['role']} CONTROL CENTER</h1>", unsafe_allow_html=True)
+    
+    if not df.empty:
+        if curr_user['role'] == "HOD":
+            st.subheader("🔔 PENDING HOD APPROVALS")
+            # Logic: Show rows where 'HOD APPROVAL' column is empty
+            if 'HOD APPROVAL' in df.columns:
+                pending = df[df['HOD APPROVAL'].isna() |
