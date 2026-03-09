@@ -3,9 +3,9 @@ import pandas as pd
 import time
 
 # --- 1. PAGE SETUP ---
-st.set_page_config(page_title="SKYQUAD", layout="wide")
+st.set_page_config(page_title="Purchase NonBOM Tracking", layout="wide")
 
-# --- 2. LOGIN MEMORY (Prevents Logout) ---
+# --- 2. SESSION MEMORY ---
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -13,7 +13,7 @@ if "logged_in" not in st.session_state:
 SID = "1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4"
 URL = f"https://docs.google.com/spreadsheets/d/{SID}/export?format=csv"
 
-# --- 4. HIGH-CONTRAST STYLE ---
+# --- 4. STYLE ---
 st.markdown("""
     <style>
     .stApp { background-color: #0f172a; }
@@ -26,27 +26,30 @@ st.markdown("""
         background-color: rgba(0,0,0,0.8) !important; 
         border: 2px solid #38bdf8 !important; 
     }
+    .summary-box {
+        background-color: rgba(255, 255, 255, 0.05);
+        border: 1px solid #38bdf8;
+        padding: 10px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 # --- 5. ACCESS KEYS ---
 KEYS = {"BOM Team": "BOM2026", "Non-BOM Team": "NBOM2026", "GM Management": "GM789"}
 
-# --- 6. MAIN LOGIC ---
 if not st.session_state.logged_in:
     # --- LOGIN SCREEN ---
-    st.markdown("<h1>🔐 SKYQUAD SECURITY ACCESS</h1>", unsafe_allow_html=True)
-    
+    st.markdown("<h1>🔐 SECURITY ACCESS</h1>", unsafe_allow_html=True)
     role = st.selectbox("OPERATIONAL ROLE", list(KEYS.keys()))
     pwd = st.text_input("SECURITY PASSKEY", type="password")
-    
     if st.button("AUTHORIZE"):
         if pwd == KEYS.get(role):
             st.session_state.logged_in = True
             st.rerun()
         else:
             st.error("Invalid Passkey")
-
 else:
     # --- AUTHORIZED DASHBOARD ---
     with st.sidebar:
@@ -55,37 +58,14 @@ else:
             st.session_state.logged_in = False
             st.rerun()
 
-    # THE DATA BLOCK
     try:
-        # Load fresh Excel data every 15 seconds
+        # Load fresh Data
         df = pd.read_csv(URL)
         
-        st.markdown("<h1>🚀 SKYQUAD COMMAND CENTER</h1>", unsafe_allow_html=True)
+        # --- NEW HEADING ---
+        st.markdown("<h1 style='text-align: center;'>PURCHASE NONBOM DAILY TRACKING REPORT</h1>", unsafe_allow_html=True)
         
-        # Display Metrics
-        col1, col2 = st.columns(2)
-        col1.metric("Total Records", len(df))
-        col2.metric("Sync Status", "ACTIVE")
-
-        # Search Bar (Simplified to prevent syntax errors)
-        find = st.text_input("SEARCH DATABASE")
-        if find:
-            # Filter logic broken into simple parts
-            search_str = str(find).lower()
-            mask = df.astype(str).apply(lambda x: x.str.lower().contains(search_str)).any(axis=1)
-            df = df[mask]
+        # --- SUMMARY TABLE SECTION ---
+        st.markdown("### 📊 Summary Report (Plant-wise)")
         
-        # Display the Table
-        st.dataframe(df, use_container_width=True, hide_index=True)
-        
-        st.write("---")
-        st.caption("Updating automatically every 15 seconds...")
-
-        # --- 7. AUTO-REFRESH (This keeps the connection live) ---
-        time.sleep(15)
-        st.rerun()
-
-    except Exception:
-        st.error("Connection Error: Check Google Sheet Share settings.")
-        time.sleep(5)
-        st.rerun()
+        # Group data by Plant and sum the specific
