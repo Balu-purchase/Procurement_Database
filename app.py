@@ -20,7 +20,7 @@ DB = {
  "bom_team": {"p": "BOM2026", "r": "BOM"}
 }
 
-# 4. SESSION INITIALIZE
+# 4. SESSION
 if "auth" not in st.session_state:
     st.session_state.auth = False
 if "log_data" not in st.session_state:
@@ -41,7 +41,7 @@ if not st.session_state.auth:
     st.stop()
 
 # 6. STYLE
-st.markdown("<style>.card { background: white; padding: 15px; border-left: 10px solid #1e40af; margin-bottom: 10px; border-radius: 5px; box-shadow: 1px 1px 3px rgba(0,0,0,0.1); } .sig { font-family: 'Brush Script MT', cursive; font-size: 24px; color: #1e40af; } .header-row { font-weight: bold; background-color: #f0f2f6; padding: 10px; border-radius: 5px; margin-bottom: 5px; }</style>", unsafe_allow_html=True)
+st.markdown("<style>.card { background: white; padding: 15px; border-left: 10px solid #1e40af; margin-bottom: 10px; border-radius: 5px; box-shadow: 1px 1px 3px rgba(0,0,0,0.1); } .sig { font-family: 'Brush Script MT', cursive; font-size: 24px; color: #1e40af; } .hdr { font-weight: bold; background: #f0f2f6; padding: 8px; }</style>", unsafe_allow_html=True)
 
 # 7. DATA
 @st.cache_data(ttl=1)
@@ -62,14 +62,16 @@ df = load()
 m = st.sidebar.radio("NAV", ["APPROVALS", "AUDIT LOG"])
 if st.sidebar.button("OUT"):
     st.session_state.auth = False
-    st.session_state.u_role = None
     st.rerun()
 
 # 9. DASHBOARD
 if m == "APPROVALS":
     st.header("🏭 PRICE APPROVAL PENDING FOR HOD")
-    curr_role = st.session_state.get("u_role")
+    role = st.session_state.get("u_role")
     
-    if not df.empty and curr_role == "HOD":
+    if not df.empty and role == "HOD":
         if T_C in df.columns:
-            # Filter
+            # Correctly Indented Block
+            p_df = df[df[T_C].isna() | (df[T_C].astype(str).str.strip() == "")]
+            seen = [x['V'] for x in st.session_state.log_data]
+            p_df = p_df[~p_df[V_C].isin(seen)]
