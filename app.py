@@ -17,7 +17,7 @@ if "auth" not in st.session_state:
 if "u_info" not in st.session_state:
     st.session_state.u_info = {}
 
-# 4. PROFESSIONAL STYLING
+# 4. STYLING
 st.markdown("""
 <style>
     .stApp { background-color: #f8fafc; }
@@ -27,11 +27,11 @@ st.markdown("""
         margin-bottom: 20px;
     }
     .sig-font { font-family: 'Brush Script MT', cursive; font-size: 28px; color: #1e40af; }
-    h1 { text-align: center; color: #0f172a; font-weight: 800; border-bottom: 2px solid #1e40af; padding-bottom: 10px; }
+    h1 { text-align: center; color: #0f172a; font-weight: 800; border-bottom: 2px solid #1e40af; }
 </style>
 """, unsafe_allow_html=True)
 
-# 5. ACCESS CONTROL GATEKEEPER
+# 5. ACCESS CONTROL
 if not st.session_state.auth:
     st.sidebar.title("🔐 ACCESS CONTROL")
     u_id = st.sidebar.text_input("USER ID")
@@ -41,36 +41,25 @@ if not st.session_state.auth:
             st.session_state.auth = True
             st.session_state.u_info = USER_DB[u_id]
             st.rerun()
-        else:
-            st.sidebar.error("❌ Invalid ID or Password")
-    
-    st.markdown("<h1>🏭 PROCUREMENT AUDIT SYSTEM</h1>", unsafe_allow_html=True)
-    st.info("Please enter your credentials in the sidebar to access protected files.")
     st.stop()
 
-# --- THE FOLLOWING CODE ONLY RUNS AFTER LOGIN ---
-
-# 6. NAVIGATION & LOGOUT
-st.sidebar.success(f"Logged in: {st.session_state.u_info.get('name')}")
+# 6. NAVIGATION
 menu = st.sidebar.radio("NAVIGATE", ["🏠 DASHBOARD", "🏛️ AUDIT LOG"])
 if st.sidebar.button("LOG OUT"):
     st.session_state.auth = False
     st.rerun()
 
-# 7. FAIL-SAFE DATA LOADING
+# 7. DATA LOADING
 @st.cache_data(ttl=30)
 def load_data():
-    # URL is joined to prevent line-break syntax errors
     base = "https://docs.google.com/spreadsheets/d/"
     key = "1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4"
     suffix = "/export?format=csv&gid=2061093150"
-    sheet_url = f"{base}{key}{suffix}"
-    
     try:
-        data = pd.read_csv(sheet_url)
+        data = pd.read_csv(f"{base}{key}{suffix}")
         data.columns = data.columns.str.strip()
         return data
-    except Exception:
+    except:
         return pd.DataFrame()
 
 df = load_data()
@@ -79,14 +68,16 @@ u = st.session_state.u_info
 # 8. DASHBOARD VIEW
 if menu == "🏠 DASHBOARD":
     st.markdown(f"<h1>🏭 {u.get('role')} CONTROL CENTER</h1>", unsafe_allow_html=True)
-    
     if not df.empty:
         if u.get('role') == "HOD":
             st.subheader("🔔 PENDING HOD APPROVALS")
-            # Logic: Show rows where 'HOD APPROVAL' column is empty
+            # Filter rows where HOD APPROVAL column is empty
             if 'HOD APPROVAL' in df.columns:
                 pending = df[df['HOD APPROVAL'].fillna('').eq('')]
-                if not pending.empty:
-                    for i, r in pending.iterrows():
-                        with st.expander(f"Review: {r.get('VENDOR NAME')} | {r.get('PART NUMBER')}"):
-                            st.write(f"**Price
+                for i, r in pending.iterrows():
+                    v_name = r.get('VENDOR NAME', 'N/A')
+                    p_num = r.get('PART NUMBER', 'N/A')
+                    price_val = r.get('PRICE', '0')
+                    with st.expander(f"Review: {v_name} | {p_num}"):
+                        st.write(f"**Price:** {price_val}")
+                        if st.button(f"APPROVE S.NO {r.get('S.NO')}", key=f"btn_{
