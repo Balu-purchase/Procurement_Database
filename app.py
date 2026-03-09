@@ -1,74 +1,80 @@
 import streamlit as st
 import pandas as pd
 
-# 1. PAGE SETUP
-st.set_page_config(page_title="Procurement Center", layout="wide")
+# 1. PAGE SETUP (Executive Wide Layout)
+st.set_page_config(page_title="Executive Procurement Summary", layout="wide")
 
-# CUSTOM CSS: Dark Theme + Fit-to-Content Table
+# CUSTOM CSS: Professional Management Theme
 st.markdown("""
     <style>
-    .stApp { background-color: #0f172a; color: #e2e8f0; }
-    .stTable { 
-        width: auto !important; 
-        margin-left: auto; 
-        margin-right: auto; 
-        background-color: #1e293b; 
+    /* Professional White Background */
+    .stApp {
+        background-color: #FFFFFF;
+        color: #1E293B;
     }
-    h1, h3 { color: #38bdf8 !important; text-align: center; }
+    /* Summary Table: Centered, Clean, and Fit-to-Content */
+    .stTable {
+        width: auto !important;
+        margin-left: auto;
+        margin-right: auto;
+        border: 1px solid #E2E8F0;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    /* Executive Headers */
+    h1 {
+        color: #0F172A;
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        font-weight: 800;
+        text-align: center;
+        padding-bottom: 10px;
+    }
+    h3 {
+        color: #334155;
+        text-align: center;
+        border-bottom: 2px solid #3B82F6;
+        display: inline-block;
+        width: 100%;
+        padding-bottom: 5px;
+    }
+    /* Center the Animation */
+    .img-container {
+        display: flex;
+        justify-content: center;
+        padding: 20px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 if "auth" not in st.session_state:
     st.session_state.auth = False
 
-# 2. LOGIN
+# 2. LOGIN SECTION
 if not st.session_state.auth:
-    st.title("🔐 PROCUREMENT GATEWAY")
-    pwd = st.text_input("PASSWORD", type="password")
-    if st.button("LOGIN"):
+    st.markdown("<h1>🔐 AUTHORIZED ACCESS ONLY</h1>", unsafe_allow_html=True)
+    pwd = st.text_input("Enter Management Key", type="password")
+    if st.button("SIGN IN"):
         if pwd in ["BOM2026", "NBOM2026", "GM789"]:
             st.session_state.auth = True
             st.rerun()
+        else:
+            st.error("Invalid Credentials")
+
+# 3. MAIN EXECUTIVE DASHBOARD
 else:
-    # 3. INDUSTRIAL ANIMATION & HEADER
-    # This link is shortened to prevent the "Unterminated String" error
-    img_url = "https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJndXhscHJndXhscHJndXhscHJndXhscHJndXhscHJndXhscHJndXhscCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKMGpxVfFvT8KMo/giphy.gif"
+    # Small Professional Animation as a Header Logo
+    st.markdown('<div class="img-container">', unsafe_allow_html=True)
+    st.image("https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJndXhscHJndXhscHJndXhscHJndXhscHJndXhscHJndXhscHJndXhscCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKMGpxVfFvT8KMo/giphy.gif", width=150)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("<h1>PURCHASE NONBOM DAILY TRACKING REPORT</h1>", unsafe_allow_html=True)
     
-    st.image(img_url, width=300)
-    st.markdown("<h1>🏭 PURCHASE NONBOM TRACKING CENTER</h1>", unsafe_allow_html=True)
-    
-    if st.button("🔄 REFRESH DATA"):
-        st.rerun()
+    # Simple Refresh for Management
+    col1, col2, col3 = st.columns([2,1,2])
+    with col2:
+        if st.button("🔄 REFRESH REPORT"):
+            st.rerun()
 
     try:
+        # Load Data from Google Sheets
         url = "https://docs.google.com/spreadsheets/d/1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4/export?format=csv"
         df = pd.read_csv(url)
-        df.columns = df.columns.str.strip()
-        df = df.loc[:, ~df.columns.duplicated()]
-
-        # --- SUMMARY REPORT (Fits to Text) ---
-        st.markdown("### 📊 STRATEGIC SUMMARY")
-        
-        if 'PLANT' in df.columns:
-            summary = df.groupby('PLANT').agg(
-                PR_REC=('PR RECEIPT', 'count'),
-                PO_DN=('PO DONE', 'count')
-            ).reset_index()
-
-            summary['BALANCED PR'] = summary['PR_REC'] - summary['PO_DN']
-            summary.insert(0, 'S.NO', range(1, len(summary) + 1))
-            summary.columns = ['S.NO', 'PLANT', 'PR RECEIPT', 'PO DONE', 'BALANCED PR']
-
-            # Totals
-            t_pr, t_po, t_bal = summary['PR RECEIPT'].sum(), summary['PO DONE'].sum(), summary['BALANCED PR'].sum()
-            total_row = pd.DataFrame([['', 'TOTAL', t_pr, t_po, t_bal]], columns=summary.columns)
-
-            st.table(pd.concat([summary, total_row], ignore_index=True))
-        
-        # --- DETAILED DATA ---
-        st.divider()
-        st.markdown("### 📂 DETAILED PROCUREMENT LOG")
-        st.dataframe(df, use_container_width=True, hide_index=True)
-
-    except Exception as e:
-        st.error("System Refreshing...")
