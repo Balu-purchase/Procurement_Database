@@ -75,27 +75,28 @@ if m == "APPROVALS":
    if T_C in df.columns:
     p_df = df[df[T_C].isna()]
     for i, r in p_df.iterrows():
-     vn, pn, pr = str(r.get(V_C)), str(r.get(P_C)), str(r.get(R_C))
-     st.write(f"**{vn}** | {pn} | {pr}")
-     t = st.text_input("Comment", key=f"t{i}")
-     if st.button("OK", key=f"b{i}"):
+     vn = str(r.get(V_C))
+     pn = str(r.get(P_C))
+     pr = str(r.get(R_C))
+     st.write("**" + vn + "** | " + pn + " | " + pr)
+     t = st.text_input("Comment", key="t"+str(i))
+     if st.button("OK", key="b"+str(i)):
       if t.upper() in ["APPROVED", "OK"]:
-       entry = {"V": vn, "N": pn, "P": pr, "S": str(r.get(S_C)), "T": datetime.now().strftime('%Y-%m-%d %H:%M')}
+       entry = {
+        "V": vn, "N": pn, "P": pr, 
+        "S": str(r.get(S_C)), 
+        "T": datetime.now().strftime('%Y-%m-%d %H:%M')
+       }
        st.session_state.local_log.append(entry)
        st.success("Sent to Logs: " + vn)
   st.divider()
   st.dataframe(df)
 
-# 10. AUDIT LOG (SAFE FORMAT)
+# 10. AUDIT LOG (NO F-STRINGS)
 else:
  st.header("OFFICIAL AUDIT LOG")
  
- # 10a. Show Session Approvals
- for r in st.session_state.local_log:
-  with st.container():
-   st.markdown('<div class="card">', unsafe_allow_html=True)
-   st.write(f"**VENDOR:** {r['V']} | **PART:** {r['N']}")
-   st.write(f"**PRICE:** {r['P']} | **STATUS:** {r['S']}")
-   st.write(f"**APPROVER:** {H_N} | **DESIG:** {H_D}")
-   st.write(f"**TIME:** {r['T']}")
-   st.markdown(f'<span class="sig">Sig: {H
+ # Combine Local Log and Excel Approvals
+ total_items = st.session_state.local_log.copy()
+ if not df.empty and T_C in df.columns:
+  mask = df[T_C].astype(str).str.upper().isin
