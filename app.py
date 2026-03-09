@@ -5,7 +5,7 @@ from datetime import datetime
 # 1. PAGE SETUP
 st.set_page_config(page_title="BOM Price", layout="wide")
 
-# 2. USER DATABASE
+# 2. USER DATABASE (STRICT ACCESS)
 USER_DB = {
     "hod_office": {
         "pass": "HOD789", 
@@ -17,7 +17,7 @@ USER_DB = {
         "pass": "BOM2026", 
         "role": "BOM", 
         "name": "BOM Team", 
-        "desig": "Executive"
+        "desig": "BOM Executive"
     }
 }
 
@@ -27,9 +27,9 @@ if "auth" not in st.session_state:
 if "u_info" not in st.session_state:
     st.session_state.u_info = {}
 
-# 4. LOGIN GUARD
+# 4. LOGIN GUARD (BLOCKS NON-BOM USERS)
 if not st.session_state.auth:
-    st.sidebar.title("🔐 LOGIN")
+    st.sidebar.title("🔐 BOM ACCESS ONLY")
     u_id = st.sidebar.text_input("USER ID")
     u_pw = st.sidebar.text_input("PASSWORD", type="password")
     if st.sidebar.button("SIGN IN"):
@@ -37,31 +37,27 @@ if not st.session_state.auth:
             st.session_state.auth = True
             st.session_state.u_info = USER_DB[u_id]
             st.rerun()
+        else:
+            st.sidebar.error("ACCESS DENIED: NOT A BOM USER")
     st.stop()
 
 # 5. STYLING
-st.markdown("""
-<style>
-    .audit-card { 
-        background: white; padding: 15px; 
-        border-left: 8px solid #1e40af; 
-        margin-bottom: 10px; border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .sig { 
-        font-family: 'Brush Script MT', cursive; 
-        font-size: 24px; color: #1e40af; 
-    }
-</style>
-""", unsafe_allow_html=True)
+css = """<style>
+    .audit-card { background: white; padding: 15px; 
+    border-left: 8px solid #1e40af; margin-bottom: 10px; 
+    border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .sig { font-family: 'Brush Script MT', cursive; 
+    font-size: 24px; color: #1e40af; }
+</style>"""
+st.markdown(css, unsafe_allow_html=True)
 
 # 6. DATA LOADING (GID 466678125)
 @st.cache_data(ttl=5)
 def load_data():
-    s = "1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4"
-    g = "466678125"
-    url = "https://docs.google.com/spreadsheets/d/"
-    url += s + "/export?format=csv&gid=" + g
+    s_id = "1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4"
+    g_id = "466678125"
+    base = "https://docs.google.com/spreadsheets/d/"
+    url = base + s_id + "/export?format=csv&gid=" + g_id
     try:
         data = pd.read_csv(url)
         data.columns = data.columns.str.strip().str.upper()
@@ -79,10 +75,12 @@ if st.sidebar.button("LOG OUT"):
     st.session_state.auth = False
     st.rerun()
 
-# 8. PRICE APPROVALS FOR BOM ITEMS
+# 8. PRICE APPROVALS (HOD ONLY ACTION)
 if menu == "🏠 APPROVALS":
     st.header("🏭 PRICE APPROVALS FOR BOM ITEMS")
+    
     if not df.empty:
+        # ONLY Bixapathi (HOD) can see the comment/approval section
         if u.get('role') == "HOD":
             st.subheader("📝 PENDING HOD REVIEW")
             col = "HOD APPROVAL"
@@ -93,11 +91,29 @@ if menu == "🏠 APPROVALS":
                     v = str(r.get('VENDOR NAME', 'N/A'))
                     with st.expander("Review: " + v):
                         st.write("Price: " + str(r.get('PRICE', '0')))
-                        c_key = "c" + str(i)
-                        b_key = "b" + str(i)
-                        txt = st.text_input("Comment", key=c_key)
-                        if st.button("SUBMIT", key=b_key):
+                        txt = st.text_input("Comment", key="c"+str(i))
+                        if st.button("SUBMIT", key="b"+str(i)):
                             if txt.upper() == "APPROVED":
-                                st.success("Signed by Bixapathi")
+                                st.success("Verified by Bixapathi")
             else:
-                st.info("HOD APPRO
+                st.info("HOD APPROVAL column missing in sheet.")
+        
+        # BOM LOGINS see the full list but NO comment boxes
+        else:
+            st.info("BOM TEAM VIEW: Approvals Pending HOD Review.")
+
+        st.divider()
+        st.dataframe(df, use_container_width=True)
+
+# 9. AUDIT LOG (RESTRICTED TO APPROVED ITEMS)
+else:
+    st.header("📜 OFFICIAL AUDIT LOG")
+    col = "HOD APPROVAL"
+    if not df.empty and col in df.columns:
+        mask = df[col].astype(str).str.upper() == "APPROVED"
+        appr = df[mask]
+        for _, r in appr.iterrows():
+            v_name = str(r.get('VENDOR NAME'))
+            ts = datetime.now().strftime('%Y-%m-%d %H:%M')
+            u_name = "Bixapathi" # Signature belongs to HOD
+            u_dsg =
