@@ -3,9 +3,9 @@ import pandas as pd
 from datetime import datetime
 
 # 1. SETUP
-st.set_page_config(page_title="BOM Approval", layout="wide")
+st.set_page_config(page_title="BOM", layout="wide")
 
-# 2. CONFIG (Matching your exact Sheet Headers)
+# 2. CONFIG (Short Keys)
 H_N = "Bixapathi"
 H_D = "Head of Department (HOD)"
 T_C = "HOD APPROVAL"
@@ -39,10 +39,10 @@ if not st.session_state.auth:
     st.stop()
 
 # 6. STYLE
-st.markdown("<style>.card { background: white; padding: 15px; border-left: 10px solid #1e40af; margin-bottom: 15px; border-radius: 5px; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); } .sig { font-family: 'Brush Script MT', cursive; font-size: 24px; color: #1e40af; }</style>", unsafe_allow_html=True)
+st.markdown("<style>.card { background: white; padding: 12px; border-left: 10px solid #1e40af; margin-bottom: 10px; border-radius: 5px; box-shadow: 1px 1px 3px rgba(0,0,0,0.1); } .sig { font-family: 'Brush Script MT', cursive; font-size: 22px; color: #1e40af; }</style>", unsafe_allow_html=True)
 
-# 7. DATA (GID 466678125)
-@st.cache_data(ttl=1)
+# 7. DATA
+@st.cache_data(ttl=2)
 def load():
     s = "1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4"
     g = "466678125"
@@ -50,7 +50,6 @@ def load():
     u_url = b + s + "/export?format=csv&gid=" + g
     try:
         df = pd.read_csv(u_url)
-        # Clean column names
         df.columns = df.columns.str.strip().str.upper()
         return df
     except:
@@ -65,58 +64,23 @@ if st.sidebar.button("LOGOUT"):
     st.session_state.auth = False
     st.rerun()
 
-# 9. DASHBOARD (TABLE FORMAT)
+# 9. DASHBOARD
 if m == "APPROVALS":
     st.header("PRICE APPROVALS FOR BOM ITEMS")
     if not df.empty:
         if u_r == "HOD":
             st.subheader("PENDING APPROVAL TABLE")
             if T_C in df.columns:
-                # Show rows where HOD Approval is empty
-                p_df = df[df[T_C].isna() | (df[T_C].astype(str).str.strip() == "")]
+                p_df = df[df[T_C].isna()]
                 if p_df.empty:
                     st.success("All Processed")
                 else:
-                    # Header Row
                     c1,c2,c3,c4,c5,c6 = st.columns([2,2,1,1,2,1])
-                    c1.write("**VENDOR**")
-                    c2.write("**PART NO**")
-                    c3.write("**PRICE**")
-                    c4.write("**BOM STATUS**")
-                    c5.write("**COMMENT**")
-                    c6.write("**ACTION**")
-                    
+                    c1.write("VENDOR")
+                    c2.write("PART NO")
+                    c3.write("PRICE")
+                    c4.write("STATUS")
+                    c5.write("COMMENT")
+                    c6.write("ACTION")
                     for i, r in p_df.iterrows():
-                        x1,x2,x3,x4,x5,x6 = st.columns([2,2,1,1,2,1])
-                        v = str(r.get(V_C, 'N/A'))
-                        n = str(r.get(P_C, 'N/A'))
-                        p = str(r.get(R_C, 'N/A'))
-                        s = str(r.get(S_C, 'N/A'))
-                        
-                        x1.write(v)
-                        x2.write(n)
-                        x3.write(p)
-                        x4.write(s)
-                        t = x5.text_input("CMT", key=f"t{i}", label_visibility="collapsed")
-                        if x6.button("OK", key=f"b{i}"):
-                            if t.upper() == "APPROVED" or t.upper() == "OK":
-                                st.success(f"Finalized: {v}")
-            else:
-                st.error("Missing Header: HOD APPROVAL")
-        
-        st.divider()
-        st.write("FULL BOM DATABASE")
-        st.dataframe(df, use_container_width=True, hide_index=True)
-
-# 10. AUDIT LOG (RECORDS APPROVED DATA)
-else:
-    st.header("OFFICIAL AUDIT LOG")
-    if not df.empty and T_C in df.columns:
-        # Items where HOD wrote APPROVED or OK in the excel sheet
-        mask = df[T_C].astype(str).str.upper().isin(["APPROVED", "OK"])
-        ok_df = df[mask]
-        
-        if ok_df.empty:
-            st.info("No records found in Audit Log.")
-        else:
-            for _,
+                        x1,x2,x3,x4,x
