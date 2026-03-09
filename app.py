@@ -66,66 +66,8 @@ if st.sidebar.button("LOG OUT"):
 # 7. DATA LOADING
 @st.cache_data(ttl=30)
 def load_data():
-    base = "https://docs.google.com/spreadsheets/d/"
-    key = "1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4"
-    suff = "/export?format=csv&gid=2061093150"
+    b = "https://docs.google.com/spreadsheets/d/"
+    k = "1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4"
+    s = "/export?format=csv&gid=2061093150"
     try:
-        data = pd.read_csv(f"{base}{key}{suff}")
-        data.columns = data.columns.str.strip()
-        return data
-    except:
-        return pd.DataFrame()
-
-df = load_data()
-u = st.session_state.u_info
-
-# 8. DASHBOARD VIEW
-if menu == "🏠 DASHBOARD":
-    role = u.get('role')
-    st.markdown(f"<h1>🏭 {role} DASHBOARD</h1>", unsafe_allow_html=True)
-    
-    if not df.empty and role == "HOD":
-        st.subheader("🔔 PENDING APPROVALS")
-        if 'HOD APPROVAL' in df.columns:
-            # Check for empty approval cells
-            mask = df['HOD APPROVAL'].fillna('').eq('')
-            pending = df[mask]
-            for i, r in pending.iterrows():
-                v_name = r.get('VENDOR NAME')
-                s_no = r.get('S.NO')
-                btn_key = f"btn_{i}"
-                with st.expander(f"Review: {v_name}"):
-                    if st.button(f"APPROVE {s_no}", key=btn_key):
-                        st.success(f"Verified by {u.get('name')}")
-        
-    st.divider()
-    st.dataframe(df, use_container_width=True, hide_index=True)
-
-# 9. AUDIT LOG VIEW (Bixapathi Signature Format)
-else:
-    st.markdown("<h1>📜 AUDIT TRAIL</h1>", unsafe_allow_html=True)
-    search = st.text_input("🔍 Search Vendor").lower()
-    
-    if not df.empty and 'HOD APPROVAL' in df.columns:
-        # Get approved rows only
-        mask = df['HOD APPROVAL'].fillna('').ne('')
-        approved = df[mask]
-        
-        if search:
-            approved = approved[approved.astype(str).apply(
-                lambda x: x.str.lower().str.contains(search)
-            ).any(axis=1)]
-
-        for _, r in approved.iterrows():
-            v = r.get('VENDOR NAME')
-            p = r.get('PRICE')
-            time_now = datetime.now().strftime('%Y-%m-%d %H:%M')
-            
-            st.markdown(f"""
-            <div class="audit-card">
-                <b>VENDOR: {v} | PRICE: {p}</b>
-                <hr>
-                <table style="width:100%">
-                    <tr>
-                        <td><b>APPROVER:</b> {u.get('name')}</td>
-                        <td><b>DESIGNATION:</b> {u.get('desig')}</td>
+        data = pd.read_csv(f"{b}{
