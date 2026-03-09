@@ -8,6 +8,7 @@ st.set_page_config(page_title="BOM")
 # 2. CONFIG
 H_N = "Bixapathi"
 H_D = "Head of Department (HOD)"
+# We will look for this column name
 T_C = "HOD APPROVAL"
 V_C = "VENDOR NAME"
 P_C = "PART NUMBER"
@@ -51,6 +52,7 @@ def load():
     u = "https://docs.google.com/spreadsheets/d/" + s + "/export?format=csv&gid=" + g
     try:
         df = pd.read_csv(u)
+        # Force all column names to UPPERCASE and remove spaces
         df.columns = df.columns.str.strip().str.upper()
         return df
     except:
@@ -68,35 +70,55 @@ if st.sidebar.button("OUT"):
 # 9. DASHBOARD
 if m == "APPROVALS":
     st.header("BOM PRICE APPROVALS")
-    # SAFETY CHECK FOR ROLE
     curr_role = st.session_state.get("u_role")
     
     if not df.empty and curr_role == "HOD":
         st.subheader("PENDING FOR BIXAPATHI")
-        appr_list = [x['V'] for x in st.session_state.log_data]
-        if T_C in df.columns:
-            p_df = df[df[T_C].isna()]
+        
+        # Check if the HOD column exists in your sheet
+        if T_C not in df.columns:
+            st.warning("⚠️ Column 'HOD APPROVAL' not found in Excel!")
+            st.info("Columns found: " + ", ".join(df.columns))
+        else:
+            # Filter for rows where HOD APPROVAL is empty
+            p_df = df[df[T_C].isna() | (df[T_C].astype(str).str.strip() == "")]
+            
+            # Also filter out items already approved in this session
+            appr_list = [x['V'] for x in st.session_state.log_data]
             p_df = p_df[~p_df[V_C].isin(appr_list)]
-            for i, r in p_df.iterrows():
-                vn = str(r.get(V_C))
-                pn = str(r.get(P_C))
-                pr = str(r.get(R_C))
-                st.write("**" + vn + "** | Part: " + pn + " | Price: " + pr)
-                t = st.text_input("Comment", key="t"+str(i))
-                if st.button("APPROVE", key="b"+str(i)):
-                    if t.upper() in ["APPROVED", "OK"]:
-                        stat = str(r.get(S_C, "N/A"))
-                        ts = datetime.now().strftime('%Y-%m-%d %H:%M')
-                        new = {"V": vn, "N": pn, "P": pr, "S": stat, "T": ts}
-                        st.session_state.log_data.append(new)
-                        st.success("Saved to Logs")
-                        st.rerun()
-    st.divider()
+
+            if p_df.empty:
+                st.success("✅ No pending items for review.")
+            else:
+                for i, r in p_df.iterrows():
+                    vn = str(r.get(V_C, "N/A"))
+                    pn = str(r.get(P_C, "N/A"))
+                    pr = str(r.get(R_C, "0"))
+                    
+                    # Display the item
+                    st.write("**" + vn + "** | Part: " + pn + " | Price: " + pr)
+                    t = st.text_input("Comment for " + vn, key="t"+str(i))
+                    
+                    if st.button("APPROVE " + vn, key="b"+str(i)):
+                        if t.upper() in ["APPROVED", "OK"]:
+                            stat = str(r.get(S_C, "N/A"))
+                            ts = datetime.now().strftime('%Y-%m-%d %H:%M')
+                            # Save to Log Memory
+                            new = {"V": vn, "N": pn, "P": pr, "S": stat, "T": ts}
+                            st.session_state.log_data.append(new)
+                            st.success("Saved to Logs: " + vn)
+                            st.rerun()
+                    st.divider()
+
+    st.write("### FULL DATABASE VIEW")
     st.dataframe(df)
 
 # 10. AUDIT LOG
 else:
     st.header("OFFICIAL AUDIT LOG")
+    if not st.session_state.log_data:
+        st.info("No items approved in this session yet.")
+    
     for r in st.session_state.log_data:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.write("**VENDOR:** " + r["V"])
@@ -104,3 +126,6 @@ else:
         st.write("**PRICE:** " + r["P"])
         st.write("**STATUS:** " + r["S"])
         st.write("**APPROVER:** " + H_N)
+        st.write("**TIME:** " + r["T"])
+        st.markdown('<span class="sig">Sig: ' + H_N + '</span>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
