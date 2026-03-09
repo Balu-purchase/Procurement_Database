@@ -50,7 +50,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 6. DATA LOADING (FIXED SYNTAX & GID)
+# 6. DATA LOADING (LOCKED TO GID 466678125)
 @st.cache_data(ttl=10)
 def load_data():
     sid = "1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4"
@@ -74,37 +74,11 @@ if st.sidebar.button("LOG OUT"):
     st.session_state.auth = False
     st.rerun()
 
-# 8. DASHBOARD
+# 8. DASHBOARD (COLON ERRORS FIXED)
 if menu == "🏠 DASHBOARD":
     st.markdown("<h1>🏭 " + u.get('role') + " CONTROL CENTER</h1>", unsafe_allow_html=True)
     
     if df.empty:
-        st.warning("⚠️ No data found. Ensure the Google Sheet is 'Public'.")
+        st.warning("⚠️ No data found. Ensure Google Sheet is 'Public'.")
     else:
-        if u.get('role') == "HOD":
-            st.subheader("🔔 PENDING APPROVALS")
-            col = "HOD APPROVAL"
-            if col in df.columns:
-                # Filter for rows where HOD APPROVAL is empty
-                pending = df[df[col].isna()]
-                if pending.empty:
-                    st.success("🎉 All entries are approved!")
-                else:
-                    for i, r in pending.iterrows():
-                        v_name = str(r.get('VENDOR NAME', 'Row ' + str(i)))
-                        with st.expander("Review: " + v_name):
-                            st.write("**Price:** " + str(r.get('PRICE', 'N/A')))
-                            if st.button("APPROVE " + str(i), key="b"+str(i)):
-                                st.success("Verified by " + u.get('name'))
-            else:
-                st.info("Header 'HOD APPROVAL' not found in Sheet.")
-        
-        st.divider()
-        st.dataframe(df, use_container_width=True, hide_index=True)
-
-# 9. AUDIT LOG (BIXAPATHI SIGNATURE & DESIGNATION)
-else:
-    st.markdown("<h1>📜 OFFICIAL AUDIT LOG</h1>", unsafe_allow_html=True)
-    
-    col = "HOD APPROVAL"
-    if not df
+        if u
