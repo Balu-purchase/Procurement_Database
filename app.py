@@ -5,7 +5,7 @@ import pandas as pd
 st.set_page_config(page_title="Executive Portal", layout="wide")
 
 # 2. USER DATABASE
-USER_DB = {"management_01": "MGMT2026", "admin_procure": "ADMIN789", "procure_team": "NBOM2026"}
+USER_DB = {"BOMTEAM": "BOM2026", "NONBOM TEAM": "NONBOM 2026", "HOD": "SCM"}
 
 # 3. BACKGROUND STYLING
 bg_img = "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=2070&auto=format&fit=crop"
