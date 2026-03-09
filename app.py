@@ -1,38 +1,40 @@
 import streamlit as st
 import pandas as pd
 
-# 1. PAGE SETUP & 3D INDUSTRIAL STYLING
+# 1. PAGE SETUP & INDUSTRIAL THEME
 st.set_page_config(page_title="Procurement Control Center", layout="wide")
 
-# CUSTOM CSS: Dark Industrial Theme + Fit-to-Content Tables
+# CUSTOM CSS: Dark Industrial Theme + Fit-to-Content Tables + Animation Styling
 st.markdown("""
     <style>
-    /* Dark Industrial Background */
+    /* Dark Charcoal Industrial Background */
     .stApp {
-        background-color: #1a1c23;
-        color: #ffffff;
+        background-color: #0f172a;
+        color: #e2e8f0;
     }
-    /* Summary Table: Fit to Text Length */
+    /* Summary Table: Fit to Text Length & Centered */
     .stTable {
-        width: auto !important;
+        width: fit-content !important;
         margin-left: auto;
         margin-right: auto;
-        border: 2px solid #4e5d6c;
-        border-radius: 10px;
+        background-color: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 8px;
+    }
+    /* Detailed Table: Dark Mode Styling */
+    .stDataFrame {
+        background-color: #1e293b;
     }
     h1, h2, h3 {
-        color: #00d4ff !important;
+        color: #38bdf8 !important;
         text-align: center;
-        font-family: 'Orbitron', sans-serif;
+        font-weight: bold;
     }
-    /* Video Container */
-    .video-container {
+    /* Animation Header Box */
+    .header-box {
         display: flex;
         justify-content: center;
-        margin-bottom: 20px;
-        border-radius: 15px;
-        overflow: hidden;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        padding: 10px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -54,51 +56,6 @@ if not st.session_state.auth:
 # 3. MAIN DASHBOARD
 else:
     # --- INDUSTRIAL 3D ANIMATION HEADER ---
-    st.markdown('<div class="video-container">', unsafe_allow_html=True)
-    # This is a high-quality industrial 3D loop placeholder
-    st.video("https://www.youtube.com/watch?v=9_pY033X0-g") # 3D Factory Animation
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("<h1>🏭 PURCHASE NONBOM TRACKING CENTER</h1>", unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1,2,1])
-    with col2:
-        if st.button("🔄 REFRESH LIVE DATABASE", use_container_width=True):
-            st.rerun()
-
-    try:
-        # Load Google Sheet
-        url = "https://docs.google.com/spreadsheets/d/1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4/export?format=csv"
-        df = pd.read_csv(url)
-        df.columns = df.columns.str.strip()
-        df = df.loc[:, ~df.columns.duplicated()]
-
-        # --- SMALL SUMMARY TABLE (Fit to Content) ---
-        st.markdown("### 📊 STRATEGIC SUMMARY")
-        
-        if 'PLANT' in df.columns:
-            summary = df.groupby('PLANT').agg(
-                PR_REC=('PR RECEIPT', 'count'),
-                PO_DN=('PO DONE', 'count')
-            ).reset_index()
-
-            summary['BALANCED PR'] = summary['PR_REC'] - summary['PO_DN']
-            summary.insert(0, 'S.NO', range(1, len(summary) + 1))
-            summary.columns = ['S.NO', 'PLANT', 'PR RECEIPT', 'PO DONE', 'BALANCED PR']
-
-            # Grand Totals
-            t_pr, t_po, t_bal = summary['PR RECEIPT'].sum(), summary['PO DONE'].sum(), summary['BALANCED PR'].sum()
-            total_row = pd.DataFrame([['', 'TOTAL', t_pr, t_po, t_bal]], columns=summary.columns)
-
-            # Displaying the "Fit-to-Text" Table
-            st.table(pd.concat([summary, total_row], ignore_index=True))
-        else:
-            st.warning("PLANT header missing.")
-
-        # --- DETAILED DATA REPORT ---
-        st.divider()
-        st.markdown("### 📂 DETAILED PROCUREMENT LOG")
-        st.dataframe(df, use_container_width=True, hide_index=True)
-
-    except Exception as e:
-        st.error(f"System Error: {e}")
+    # Using a professional 3D Industrial loop (GIF) for instant loading
+    st.markdown('<div class="header-box">', unsafe_allow_html=True)
+    st.image("
