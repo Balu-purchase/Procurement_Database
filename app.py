@@ -7,8 +7,18 @@ st.set_page_config(page_title="Audit Portal", layout="wide")
 
 # 2. USER DATABASE
 USER_DB = {
-    "hod_office": {"pass": "HOD789", "role": "HOD", "name": "Bixapathi", "desig": "Head of Department (HOD)"},
-    "bom_team": {"pass": "BOM2026", "role": "BOM", "name": "BOM Team", "desig": "Executive"}
+    "hod_office": {
+        "pass": "HOD789", 
+        "role": "HOD", 
+        "name": "Bixapathi", 
+        "desig": "Head of Department (HOD)"
+    },
+    "bom_team": {
+        "pass": "BOM2026", 
+        "role": "BOM", 
+        "name": "BOM Team", 
+        "desig": "Executive"
+    }
 }
 
 # 3. INITIALIZE SESSION STATE
@@ -23,20 +33,24 @@ st.markdown("""
     .stApp { background-color: #f8fafc; }
     .audit-card { 
         background: white; padding: 25px; border-radius: 12px; 
-        border-left: 10px solid #1e40af; box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+        border-left: 10px solid #1e40af; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
         margin-bottom: 20px;
     }
-    .sig-font { font-family: 'Brush Script MT', cursive; font-size: 28px; color: #1e40af; }
-    h1 { text-align: center; color: #0f172a; font-weight: 800; border-bottom: 2px solid #1e40af; }
+    .sig-font { 
+        font-family: 'Brush Script MT', cursive; 
+        font-size: 28px; color: #1e40af; 
+    }
+    h1 { text-align: center; color: #0f172a; font-weight: 800; }
 </style>
 """, unsafe_allow_html=True)
 
 # 5. ACCESS CONTROL
 if not st.session_state.auth:
-    st.sidebar.title("🔐 ACCESS CONTROL")
+    st.sidebar.title("🔐 LOGIN")
     u_id = st.sidebar.text_input("USER ID")
     u_pw = st.sidebar.text_input("PASSWORD", type="password")
-    if st.sidebar.button("SIGN IN", use_container_width=True):
+    if st.sidebar.button("SIGN IN"):
         if u_id in USER_DB and USER_DB[u_id]["pass"] == u_pw:
             st.session_state.auth = True
             st.session_state.u_info = USER_DB[u_id]
@@ -54,9 +68,9 @@ if st.sidebar.button("LOG OUT"):
 def load_data():
     base = "https://docs.google.com/spreadsheets/d/"
     key = "1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4"
-    suffix = "/export?format=csv&gid=2061093150"
+    suff = "/export?format=csv&gid=2061093150"
     try:
-        data = pd.read_csv(f"{base}{key}{suffix}")
+        data = pd.read_csv(f"{base}{key}{suff}")
         data.columns = data.columns.str.strip()
         return data
     except:
@@ -67,17 +81,51 @@ u = st.session_state.u_info
 
 # 8. DASHBOARD VIEW
 if menu == "🏠 DASHBOARD":
-    st.markdown(f"<h1>🏭 {u.get('role')} CONTROL CENTER</h1>", unsafe_allow_html=True)
-    if not df.empty:
-        if u.get('role') == "HOD":
-            st.subheader("🔔 PENDING HOD APPROVALS")
-            # Filter rows where HOD APPROVAL column is empty
-            if 'HOD APPROVAL' in df.columns:
-                pending = df[df['HOD APPROVAL'].fillna('').eq('')]
-                for i, r in pending.iterrows():
-                    v_name = r.get('VENDOR NAME', 'N/A')
-                    p_num = r.get('PART NUMBER', 'N/A')
-                    price_val = r.get('PRICE', '0')
-                    with st.expander(f"Review: {v_name} | {p_num}"):
-                        st.write(f"**Price:** {price_val}")
-                        if st.button(f"APPROVE S.NO {r.get('S.NO')}", key=f"btn_{
+    role = u.get('role')
+    st.markdown(f"<h1>🏭 {role} DASHBOARD</h1>", unsafe_allow_html=True)
+    
+    if not df.empty and role == "HOD":
+        st.subheader("🔔 PENDING APPROVALS")
+        if 'HOD APPROVAL' in df.columns:
+            # Check for empty approval cells
+            mask = df['HOD APPROVAL'].fillna('').eq('')
+            pending = df[mask]
+            for i, r in pending.iterrows():
+                v_name = r.get('VENDOR NAME')
+                s_no = r.get('S.NO')
+                btn_key = f"btn_{i}"
+                with st.expander(f"Review: {v_name}"):
+                    if st.button(f"APPROVE {s_no}", key=btn_key):
+                        st.success(f"Verified by {u.get('name')}")
+        
+    st.divider()
+    st.dataframe(df, use_container_width=True, hide_index=True)
+
+# 9. AUDIT LOG VIEW (Bixapathi Signature Format)
+else:
+    st.markdown("<h1>📜 AUDIT TRAIL</h1>", unsafe_allow_html=True)
+    search = st.text_input("🔍 Search Vendor").lower()
+    
+    if not df.empty and 'HOD APPROVAL' in df.columns:
+        # Get approved rows only
+        mask = df['HOD APPROVAL'].fillna('').ne('')
+        approved = df[mask]
+        
+        if search:
+            approved = approved[approved.astype(str).apply(
+                lambda x: x.str.lower().str.contains(search)
+            ).any(axis=1)]
+
+        for _, r in approved.iterrows():
+            v = r.get('VENDOR NAME')
+            p = r.get('PRICE')
+            time_now = datetime.now().strftime('%Y-%m-%d %H:%M')
+            
+            st.markdown(f"""
+            <div class="audit-card">
+                <b>VENDOR: {v} | PRICE: {p}</b>
+                <hr>
+                <table style="width:100%">
+                    <tr>
+                        <td><b>APPROVER:</b> {u.get('name')}</td>
+                        <td><b>DESIGNATION:</b> {u.get('desig')}</td>
