@@ -35,12 +35,16 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 4. AUTHENTICATION
+# 4. INITIALIZE SESSION STATE (Prevents AttributeError)
 if "auth" not in st.session_state:
     st.session_state.auth = False
+if "user" not in st.session_state:
+    st.session_state.user = None
+
+# 5. SIDEBAR LOGIN
+st.sidebar.title("🔐 ACCESS CONTROL")
 
 if not st.session_state.auth:
-    st.sidebar.title("🔐 ACCESS CONTROL")
     u_id = st.sidebar.text_input("USER ID")
     u_pw = st.sidebar.text_input("PASSWORD", type="password")
     if st.sidebar.button("SIGN IN", use_container_width=True):
@@ -48,17 +52,21 @@ if not st.session_state.auth:
             st.session_state.auth = True
             st.session_state.user = USER_DB[u_id]
             st.rerun()
-    st.stop()
+        else:
+            st.sidebar.error("❌ Invalid ID or Password")
+    st.warning("Please log in to access the system.")
+    st.stop() # Force stop here so code below doesn't run without a user
 
-# 5. NAVIGATION
+# 6. NAVIGATION & LOGOUT (Only reachable if auth is True)
 menu = st.sidebar.radio("NAVIGATE", ["🏠 DASHBOARD", "🏛️ AUDIT LOG"])
 if st.sidebar.button("LOG OUT"):
     st.session_state.auth = False
+    st.session_state.user = None
     st.rerun()
 
-# 6. DATA LOADING
+# 7. DATA LOADING
+@st.cache_data(ttl=60)
 def load_data():
-    # Make sure GID matches your BOM Sheet tab
     url = "https://docs.google.com/spreadsheets/d/1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4/export?format=csv&gid=2061093150"
     try:
         df = pd.read_csv(url)
@@ -69,12 +77,8 @@ def load_data():
 
 df = load_data()
 
-# 7. DASHBOARD VIEW
+# 8. DASHBOARD VIEW
 if menu == "🏠 DASHBOARD":
-    st.markdown(f"<h1>🏭 {st.session_state.user['role']} CONTROL CENTER</h1>", unsafe_allow_html=True)
-    
-    if not df.empty:
-        # HOD APPROVAL SECTION
-        if st.session_state.user['role'] == "HOD":
-            st.subheader("🔔 PENDING HOD APPROVALS")
-            # If 'HOD APPROVAL' column is empty, show it here
+    # Safe access to session_state.user
+    role = st.session_state.user['role']
+    st.markdown(
