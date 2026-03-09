@@ -5,7 +5,7 @@ from datetime import datetime
 # 1. PAGE SETUP
 st.set_page_config(page_title="BOM Price", layout="wide")
 
-# 2. CONFIG (SHORT NAMES TO PREVENT CUT-OFF)
+# 2. CONFIG
 H_NAME = "Bixapathi"
 H_DSG = "Head of Department (HOD)"
 B_DSG = "BOM Executive"
@@ -54,33 +54,10 @@ def load_data():
         return pd.DataFrame()
 
 df = load_data()
-u = st.session_state.u_info
+# SAFE USER ACCESS
+u = st.session_state.get("u_info", {})
+u_role = u.get("role", "GUEST")
 
 # 8. NAVIGATION
 menu = st.sidebar.radio("NAV", ["🏠 APPROVALS", "🏛️ AUDIT LOG"])
 if st.sidebar.button("LOG OUT"):
-    st.session_state.auth = False
-    st.rerun()
-
-# 9. DASHBOARD
-if menu == "🏠 APPROVALS":
-    st.header("🏭 PRICE APPROVALS FOR BOM ITEMS")
-    if not df.empty:
-        if u["role"] == "HOD":
-            st.subheader("📝 PENDING HOD REVIEW")
-            if T_COL in df.columns:
-                pend = df[df[T_COL].isna()]
-                for i, r in pend.iterrows():
-                    v = str(r.get('VENDOR NAME', 'N/A'))
-                    with st.expander("Review: " + v):
-                        st.write("Price: " + str(r.get('PRICE', '0')))
-                        txt = st.text_input("Comment", key="c"+str(i))
-                        if st.button("SUBMIT", key="b"+str(i)):
-                            if txt.upper() == "APPROVED":
-                                st.success("Signed by " + H_NAME)
-        else:
-            st.info("BOM VIEW: Waiting for HOD.")
-        st.divider()
-        st.dataframe(df, use_container_width=True)
-
-# 10. AUDIT LOG (BI
