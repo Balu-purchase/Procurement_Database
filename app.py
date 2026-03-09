@@ -60,5 +60,33 @@ if st.sidebar.button("LOG OUT"):
 # 7. FAIL-SAFE DATA LOADING
 @st.cache_data(ttl=30)
 def load_data():
-    # Full URL provided to avoid SyntaxError
-    sheet_url = "
+    # URL is joined to prevent line-break syntax errors
+    base = "https://docs.google.com/spreadsheets/d/"
+    key = "1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4"
+    suffix = "/export?format=csv&gid=2061093150"
+    sheet_url = f"{base}{key}{suffix}"
+    
+    try:
+        data = pd.read_csv(sheet_url)
+        data.columns = data.columns.str.strip()
+        return data
+    except Exception:
+        return pd.DataFrame()
+
+df = load_data()
+u = st.session_state.u_info
+
+# 8. DASHBOARD VIEW
+if menu == "🏠 DASHBOARD":
+    st.markdown(f"<h1>🏭 {u.get('role')} CONTROL CENTER</h1>", unsafe_allow_html=True)
+    
+    if not df.empty:
+        if u.get('role') == "HOD":
+            st.subheader("🔔 PENDING HOD APPROVALS")
+            # Logic: Show rows where 'HOD APPROVAL' column is empty
+            if 'HOD APPROVAL' in df.columns:
+                pending = df[df['HOD APPROVAL'].fillna('').eq('')]
+                if not pending.empty:
+                    for i, r in pending.iterrows():
+                        with st.expander(f"Review: {r.get('VENDOR NAME')} | {r.get('PART NUMBER')}"):
+                            st.write(f"**Price
