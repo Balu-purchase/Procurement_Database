@@ -31,14 +31,4 @@ st.markdown("""
         border-radius: 25px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
     }
     </style>
-    <div class="watermark">NONBOM TEAM - PURCHASE SKYQUAD ELECTRONICS</div>
-    """, unsafe_allow_html=True)
-
-# --- 3. SESSION LOGIC ---
-if "secure_access" not in st.session_state:
-    st.session_state.secure_access = False
-if "role" not in st.session_state:
-    st.session_state.role = None
-
-# --- 4. SECURE LOGIN GATE ---
-if not st
+    <div class="watermark">NONBOM TEAM - PURCHASE SKYQUAD
