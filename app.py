@@ -1,80 +1,68 @@
 import streamlit as st
 import pandas as pd
 
-# 1. PAGE SETUP (Executive Wide Layout)
-st.set_page_config(page_title="Executive Procurement Summary", layout="wide")
+# 1. PAGE SETUP
+st.set_page_config(page_title="Procurement Control Center", layout="wide")
 
-# CUSTOM CSS: Professional Management Theme
+# 2. FULL-SCREEN 3D VIDEO BACKGROUND CSS
+# This code injects a background video that loops smoothly
 st.markdown("""
     <style>
-    /* Professional White Background */
+    #tabs-b3-container { background: transparent; }
     .stApp {
-        background-color: #FFFFFF;
-        color: #1E293B;
+        background: transparent;
     }
-    /* Summary Table: Centered, Clean, and Fit-to-Content */
+    /* The Video Background */
+    #myVideo {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        min-width: 100%;
+        min-height: 100%;
+        z-index: -1;
+        opacity: 0.15; /* Adjusted for readability: 15% visibility */
+        filter: grayscale(50%);
+    }
+    /* Summary Table Styling: Clean White with Glow */
     .stTable {
         width: auto !important;
         margin-left: auto;
         margin-right: auto;
-        border: 1px solid #E2E8F0;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        background-color: rgba(255, 255, 255, 0.95);
+        border-radius: 12px;
+        box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.2);
     }
-    /* Executive Headers */
     h1 {
         color: #0F172A;
-        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        font-family: 'Trebuchet MS', sans-serif;
         font-weight: 800;
         text-align: center;
-        padding-bottom: 10px;
-    }
-    h3 {
-        color: #334155;
-        text-align: center;
-        border-bottom: 2px solid #3B82F6;
-        display: inline-block;
-        width: 100%;
-        padding-bottom: 5px;
-    }
-    /* Center the Animation */
-    .img-container {
-        display: flex;
-        justify-content: center;
-        padding: 20px;
+        background: rgba(255, 255, 255, 0.7);
+        padding: 10px;
+        border-radius: 15px;
     }
     </style>
+    
+    <video autoplay muted loop id="myVideo">
+      <source src="https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-a-circuit-board-1542-large.mp4" type="video/mp4">
+    </video>
     """, unsafe_allow_html=True)
 
 if "auth" not in st.session_state:
     st.session_state.auth = False
 
-# 2. LOGIN SECTION
+# 3. LOGIN
 if not st.session_state.auth:
-    st.markdown("<h1>🔐 AUTHORIZED ACCESS ONLY</h1>", unsafe_allow_html=True)
-    pwd = st.text_input("Enter Management Key", type="password")
-    if st.button("SIGN IN"):
+    st.markdown("<h1>🔐 MANAGEMENT LOGIN</h1>", unsafe_allow_html=True)
+    pwd = st.text_input("ENTER KEY", type="password")
+    if st.button("AUTHORIZE SYSTEM"):
         if pwd in ["BOM2026", "NBOM2026", "GM789"]:
             st.session_state.auth = True
             st.rerun()
-        else:
-            st.error("Invalid Credentials")
-
-# 3. MAIN EXECUTIVE DASHBOARD
 else:
-    # Small Professional Animation as a Header Logo
-    st.markdown('<div class="img-container">', unsafe_allow_html=True)
-    st.image("https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJndXhscHJndXhscHJndXhscHJndXhscHJndXhscHJndXhscHJndXhscCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7TKMGpxVfFvT8KMo/giphy.gif", width=150)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("<h1>PURCHASE NONBOM DAILY TRACKING REPORT</h1>", unsafe_allow_html=True)
+    # 4. MAIN INTERFACE
+    st.markdown("<h1>🏭 PURCHASE NONBOM DAILY TRACKING REPORT</h1>", unsafe_allow_html=True)
     
-    # Simple Refresh for Management
     col1, col2, col3 = st.columns([2,1,2])
     with col2:
-        if st.button("🔄 REFRESH REPORT"):
-            st.rerun()
-
-    try:
-        # Load Data from Google Sheets
-        url = "https://docs.google.com/spreadsheets/d/1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4/export?format=csv"
-        df = pd.read_csv(url)
+        if st.button("🔄 REFRESH LIVE DATABASE", use_container_width=True):
