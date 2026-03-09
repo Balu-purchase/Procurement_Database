@@ -1,53 +1,76 @@
 import streamlit as st
 import pandas as pd
+import requests
+from io import BytesIO
 
-# --- PAGE CONFIG ---
-st.set_page_config(page_title="Resolute Procurement Portal", layout="wide")
+# --- CONFIGURATION ---
+# Your WPS Office Cloud Link
+WPS_LINK = "https://in.docworkspace.com/d/sIKXr38L0Aczgus0G?sa=601.1037"
+
+st.set_page_config(page_title="Resolute Industrial Portal", layout="wide")
 
 # --- LOGIN SYSTEM ---
-if "auth" not in st.session_state:
-    st.session_state.auth = False
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
 
-if not st.session_state.auth:
-    st.sidebar.title("🔐 Secure Access")
+if not st.session_state.authenticated:
+    st.sidebar.title("🔐 Secure Login")
     role = st.sidebar.selectbox("Select Team", ["BOM Team", "Non-BOM Team", "GM Management"])
-    pwd = st.sidebar.text_input("Passkey", type="password")
+    pwd = st.sidebar.text_input("Enter Passkey", type="password")
     
-    if st.sidebar.button("Login"):
-        # Match your existing passwords
-        if (role == "BOM Team" and pwd == "BOM2026") or \
-           (role == "Non-BOM Team" and pwd == "NBOM2026") or \
-           (role == "GM Management" and pwd == "GM789"):
-            st.session_state.auth = True
+    if st.sidebar.button("Access Portal"):
+        # Credentials check
+        creds = {"BOM Team": "BOM2026", "Non-BOM Team": "NBOM2026", "GM Management": "GM789"}
+        if pwd == creds.get(role):
+            st.session_state.authenticated = True
             st.session_state.role = role
             st.rerun()
         else:
-            st.sidebar.error("❌ Invalid Passkey")
+            st.sidebar.error("❌ Incorrect Passkey")
 
-# --- MAIN DASHBOARD ---
+# --- MAIN INTERFACE ---
 else:
-    st.title("🏭 Daily Procurement Tracking")
-    st.sidebar.success(f"Role: {st.session_state.role}")
+    st.title("🏭 Daily Procurement Tracking (LIVE)")
+    st.sidebar.success(f"Connected: {st.session_state.role}")
     
-    # Logout button
     if st.sidebar.button("Logout"):
-        st.session_state.auth = False
+        st.session_state.authenticated = False
         st.rerun()
 
-    # --- STEP: UPLOAD CSV ---
-    st.info("Please upload your 'Procurement_Database.csv' file below.")
-    uploaded_file = st.file_uploader("Upload CSV File", type=["csv"])
+    # --- LIVE DATA FETCHING ---
+    @st.cache_data(ttl=300)  # Automatically refreshes every 5 minutes
+    def get_data_from_cloud(url):
+        try:
+            # We try to grab the file stream directly
+            response = requests.get(url)
+            # This reads the Excel file into memory
+            # Note: If this still asks for openpyxl, you MUST run 'pip install openpyxl' once.
+            return pd.read_excel(BytesIO(response.content))
+        except Exception as e:
+            st.error(f"Sync Error: {e}")
+            return None
 
-    if uploaded_file is not None:
-        # read_csv DOES NOT require openpyxl or any extra installs
-        df = pd.read_csv(uploaded_file)
+    df = get_data_from_cloud(WPS_LINK)
+
+    if df is not None:
+        st.info("✅ Data is live and synced with WPS Cloud.")
         
-        # Search Filter
-        search = st.text_input("🔍 Search Database")
+        # Search Bar
+        search = st.text_input("🔍 Quick Search (Project, Vendor, or Status)")
         if search:
+            # Filters the table based on your typing
             df = df[df.astype(str).apply(lambda x: x.str.contains(search, case=False)).any(axis=1)]
-            
-        st.subheader("Live Data")
-        st.dataframe(df, use_container_width=True)
+
+        # Display Table
+        st.dataframe(df, use_container_width=True, hide_index=True)
+        
+        # Refresh Data Manual Button
+        if st.button("🔄 Sync Latest Changes Now"):
+            st.cache_data.clear()
+            st.rerun()
+
     else:
-        st.warning("Waiting for file upload...")
+        st.warning("⚠️ Could not reach the cloud file. Please check your internet or the link permissions.")
+
+st.markdown("---")
+st.caption("Resolute Electronics v3.0 | Auto-Sync Enabled")
