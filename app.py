@@ -4,7 +4,7 @@ import pandas as pd
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="SKYQUAD | SECURE PORTAL", layout="wide")
 
-# --- CUSTOM CSS (Animated Background & UI) ---
+# --- CUSTOM CSS ---
 st.markdown("""
     <style>
     .stApp {
@@ -47,11 +47,4 @@ st.markdown("""
 
 # --- ACCESS CONTROL ---
 if "secure_access" not in st.session_state:
-    st.session_state.secure_access = False
-    st.session_state.role = None
-
-# --- LOGIN GATE ---
-if not st.session_state.secure_access:
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
-    _, col_login, _ = st.columns([1, 1.2, 1])
-    with col_login:
+    st.session_state
