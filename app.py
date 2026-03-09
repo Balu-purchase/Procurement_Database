@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 
 # 1. PAGE SETUP
-st.set_page_config(page_title="Procurement Audit Portal", layout="wide")
+st.set_page_config(page_title="Audit Portal", layout="wide")
 
 # 2. USER DATABASE
 USER_DB = {
@@ -14,8 +14,8 @@ USER_DB = {
 # 3. INITIALIZE SESSION STATE
 if "auth" not in st.session_state:
     st.session_state.auth = False
-if "user_info" not in st.session_state:
-    st.session_state.user_info = {}
+if "u_info" not in st.session_state:
+    st.session_state.u_info = {}
 
 # 4. PROFESSIONAL STYLING
 st.markdown("""
@@ -39,27 +39,26 @@ if not st.session_state.auth:
     if st.sidebar.button("SIGN IN", use_container_width=True):
         if u_id in USER_DB and USER_DB[u_id]["pass"] == u_pw:
             st.session_state.auth = True
-            st.session_state.user_info = USER_DB[u_id]
+            st.session_state.u_info = USER_DB[u_id]
             st.rerun()
         else:
             st.sidebar.error("❌ Invalid ID or Password")
     
-    # Show welcome screen only if not logged in
-    st.markdown("<h1>🏭 WELCOME TO THE PROCUREMENT PORTAL</h1>", unsafe_allow_html=True)
-    st.info("Please enter your credentials in the sidebar to view the Dashboard and Audit Logs.")
-    st.stop() # THIS PREVENTS ANY FURTHER CODE FROM RUNNING
+    st.markdown("<h1>🏭 PROCUREMENT AUDIT SYSTEM</h1>", unsafe_allow_html=True)
+    st.info("Please enter your credentials in the sidebar to access protected files.")
+    st.stop()
 
-# --- EVERYTHING BELOW THIS LINE ONLY RUNS IF AUTH IS TRUE ---
+# --- THE FOLLOWING CODE ONLY RUNS AFTER LOGIN ---
 
 # 6. NAVIGATION & LOGOUT
-st.sidebar.success(f"User: {st.session_state.user_info.get('name')}")
+st.sidebar.success(f"Logged in: {st.session_state.u_info.get('name')}")
 menu = st.sidebar.radio("NAVIGATE", ["🏠 DASHBOARD", "🏛️ AUDIT LOG"])
 if st.sidebar.button("LOG OUT"):
     st.session_state.auth = False
-    st.session_state.user_info = {}
     st.rerun()
 
-# 7. DATA LOADING
+# 7. FAIL-SAFE DATA LOADING
 @st.cache_data(ttl=30)
 def load_data():
-    url =
+    # Full URL provided to avoid SyntaxError
+    sheet_url = "
