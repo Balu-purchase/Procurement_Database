@@ -1,12 +1,11 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
 import time
 
 # --- 1. PAGE SETUP ---
 st.set_page_config(page_title="SKYQUAD", layout="wide")
 
-# --- 2. SESSION MEMORY (Prevents Logout) ---
+# --- 2. LOGIN MEMORY (Prevents Logout) ---
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -46,12 +45,10 @@ if not st.session_state.logged_in:
             st.session_state.logged_in = True
             st.rerun()
         else:
-            st.error("Invalid Key")
+            st.error("Invalid Passkey")
 
 else:
     # --- AUTHORIZED DASHBOARD ---
-    # Refresh logic only runs here so you stay logged in
-    
     with st.sidebar:
         st.write("🛰️ SYSTEM LIVE")
         if st.button("LOGOUT"):
@@ -70,8 +67,25 @@ else:
         col1.metric("Total Records", len(df))
         col2.metric("Sync Status", "ACTIVE")
 
-        # Search Bar
+        # Search Bar (Simplified to prevent syntax errors)
         find = st.text_input("SEARCH DATABASE")
         if find:
-            # Filter the table based on search
-            df = df[df.astype(str).apply(lambda x: x.str.contains(find, case=False
+            # Filter logic broken into simple parts
+            search_str = str(find).lower()
+            mask = df.astype(str).apply(lambda x: x.str.lower().contains(search_str)).any(axis=1)
+            df = df[mask]
+        
+        # Display the Table
+        st.dataframe(df, use_container_width=True, hide_index=True)
+        
+        st.write("---")
+        st.caption("Updating automatically every 15 seconds...")
+
+        # --- 7. AUTO-REFRESH (This keeps the connection live) ---
+        time.sleep(15)
+        st.rerun()
+
+    except Exception:
+        st.error("Connection Error: Check Google Sheet Share settings.")
+        time.sleep(5)
+        st.rerun()
