@@ -4,15 +4,14 @@ import pandas as pd
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Skyquad Electronics | Procurement", layout="wide")
 
-# --- CUSTOM CSS (Animated Background & Simple Effective UI) ---
+# --- CUSTOM CSS (Animated Background & Watermark) ---
 st.markdown("""
     <style>
-    /* 1. Smooth Animated Gradient Background */
+    /* Smooth Animated Gradient Background */
     .stApp {
-        background: linear-gradient(-45deg, #0f172a, #1e293b, #0ea5e9, #1e1b4b);
+        background: linear-gradient(-45deg, #0f172a, #1e293b, #0369a1, #1e1b4b);
         background-size: 400% 400%;
         animation: gradient 15s ease infinite;
-        color: white;
     }
 
     @keyframes gradient {
@@ -21,48 +20,35 @@ st.markdown("""
         100% { background-position: 0% 50%; }
     }
 
-    /* 2. Fixed Watermark */
+    /* Fixed Watermark */
     .watermark {
         position: fixed;
         bottom: 20px;
         left: 50%;
         transform: translateX(-50%);
         opacity: 0.3;
-        font-size: 1.2rem;
+        font-size: 1.1rem;
         color: #60a5fa;
         font-weight: bold;
-        letter-spacing: 3px;
-        z-index: 0;
+        letter-spacing: 2px;
+        z-index: 999;
         pointer-events: none;
         text-transform: uppercase;
+        font-family: sans-serif;
     }
 
-    /* 3. Clean Glass Container */
-    .main-container {
+    /* Glass Effect for Data Tables */
+    .stDataFrame {
         background: rgba(255, 255, 255, 0.05);
-        border-radius: 20px;
-        padding: 30px;
+        border-radius: 10px;
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    /* 4. Minimalist Headers */
+    /* Titles */
     h1 {
-        font-family: 'Inter', sans-serif;
-        font-weight: 800;
-        color: white;
-        text-align: center;
-        margin-bottom: 5px;
-    }
-    
-    /* 5. Styled Dataframe */
-    [data-testid="stDataFrame"] {
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 10px;
-    }
-
-    /* Sidebar adjustment */
-    [data-testid="stSidebar"] {
-        background-color: rgba(0, 0, 0, 0.3) !important;
+        color: white !important;
+        font-weight: 800 !important;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
     }
     </style>
     
@@ -74,15 +60,25 @@ if "auth" not in st.session_state:
     st.session_state.auth = False
 
 if not st.session_state.auth:
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    with st.container():
-        st.markdown("<h1>SKYQUAD PORTAL</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #94a3b8;'>Please login to access procurement records</p>", unsafe_allow_html=True)
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 1.5, 1])
+    
+    with col2:
+        st.markdown("<h1 style='text-align: center;'>SKYQUAD LOGIN</h1>", unsafe_allow_html=True)
+        role = st.selectbox("Select Team", ["BOM Team", "Non-BOM Team", "GM Management"])
+        pwd = st.text_input("Enter Passkey", type="password")
         
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            role = st.selectbox("Select Team", ["BOM Team", "Non-BOM Team", "GM Management"])
-            pwd = st.text_input("Enter Passkey", type="password")
-            if st.button("Login"):
-                creds = {"BOM Team": "BOM2026", "Non-BOM Team": "NBOM2026", "GM Management": "GM789"}
-                if pwd == creds.get(role):
+        if st.button("Access Dashboard", use_container_width=True):
+            creds = {"BOM Team": "BOM2026", "Non-BOM Team": "NBOM2026", "GM Management": "GM789"}
+            if pwd == creds.get(role):
+                st.session_state.auth = True
+                st.session_state.role = role
+                st.rerun()
+            else:
+                st.error("Invalid Credentials")
+
+# --- MAIN DASHBOARD ---
+else:
+    # Sidebar
+    st.sidebar.title("Skyquad Menu")
+    st.sidebar.write(f"Logged
