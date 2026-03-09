@@ -2,12 +2,11 @@ import streamlit as st
 import pandas as pd
 
 # --- PAGE CONFIG ---
-st.set_page_config(page_title="SKYQUAD | SECURE PORTAL", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="SKYQUAD | GM COMMAND CENTER", layout="wide")
 
-# --- ADVANCED SECURITY & ANIMATED UI ---
+# --- CUSTOM CSS (Animated Background & Watermark) ---
 st.markdown("""
     <style>
-    /* 1. Animated Skyquad Background */
     .stApp {
         background: linear-gradient(-45deg, #020617, #0f172a, #1e1b4b, #000000);
         background-size: 400% 400%;
@@ -18,8 +17,6 @@ st.markdown("""
         50% { background-position: 100% 50%; }
         100% { background-position: 0% 50%; }
     }
-
-    /* 2. Anti-Hack Watermark (Fixed & Protected) */
     .watermark {
         position: fixed;
         bottom: 15px;
@@ -37,92 +34,66 @@ st.markdown("""
         padding: 5px 15px;
         border-radius: 50px;
     }
-
-    /* 3. Restricted UI Styling */
-    .stDataFrame { border: 1px solid #1e3a8a !important; border-radius: 12px; }
-    h1 { color: #f8fafc !important; text-shadow: 0 0 20px rgba(56, 189, 248, 0.4); }
+    /* Glassmorphism containers for side-by-side view */
+    [data-testid="column"] {
+        background: rgba(255, 255, 255, 0.03);
+        padding: 15px;
+        border-radius: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    h1, h2, h3 { color: #f8fafc !important; }
     </style>
-    
     <div class="watermark">NONBOM TEAM - PURCHASE SKYQUAD ELECTRONICS</div>
     """, unsafe_allow_html=True)
 
-# --- INTERNAL SECURITY GATE ---
-# These are hardcoded; in a real 'hack-proof' environment, 
-# you'd never show these, but they are here for your team's access.
-ACCESS_KEYS = {
-    "BOM Team": "BOM2026",
-    "Non-BOM Team": "NBOM2026",
-    "GM Management": "GM789"
-}
-
+# --- ACCESS CONTROL ---
 if "secure_access" not in st.session_state:
     st.session_state.secure_access = False
     st.session_state.role = None
 
-# --- STEP 1: ACCESS GATE (THE LOCK) ---
 if not st.session_state.secure_access:
     st.markdown("<br><br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.2, 1])
-    
     with col2:
         st.markdown("<h1 style='text-align: center;'>🔐 SKYQUAD SHIELD</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #64748b;'>Internal Procurement Access Only</p>", unsafe_allow_html=True)
-        
-        # Identity selection
-        selected_role = st.selectbox("Identify Your Team", list(ACCESS_KEYS.keys()))
-        # Secure password input
-        entered_pwd = st.text_input("Security Passkey", type="password", help="Contact IT for lost keys.")
-        
+        role = st.selectbox("Identify Your Team", ["BOM Team", "Non-BOM Team", "GM Management"])
+        pwd = st.text_input("Security Passkey", type="password")
         if st.button("VERIFY IDENTITY", use_container_width=True):
-            if entered_pwd == ACCESS_KEYS.get(selected_role):
+            creds = {"BOM Team": "BOM2026", "Non-BOM Team": "NBOM2026", "GM Management": "GM789"}
+            if pwd == creds.get(role):
                 st.session_state.secure_access = True
-                st.session_state.role = selected_role
-                st.success("Identity Verified. Granting Access...")
+                st.session_state.role = role
                 st.rerun()
             else:
-                st.error("⚠️ ACCESS DENIED: Invalid Security Key.")
+                st.error("Invalid Passkey")
 
-# --- STEP 2: SECURE DASHBOARD (THE VAULT) ---
+# --- LOGGED IN AREA ---
 else:
-    # Sidebar remains for logout and status
-    st.sidebar.markdown("### 🛠 STATUS")
-    st.sidebar.write(f"**USER:** {st.session_state.role}")
-    st.sidebar.write("**ENCRYPTION:** ACTIVE")
-    
+    # Sidebar Logout
+    st.sidebar.title("System Status")
+    st.sidebar.success(f"Mode: {st.session_state.role}")
     if st.sidebar.button("TERMINATE SESSION"):
         st.session_state.secure_access = False
-        st.session_state.role = None
         st.rerun()
 
-    st.markdown(f"<h1 style='text-align: center;'>{st.session_state.role} Command Center</h1>", unsafe_allow_html=True)
-    
-    # Secure File Upload
-    st.markdown("---")
-    uploaded_file = st.file_uploader("📂 Load Restricted CSV Data", type=["csv"])
+    # --- GM MANAGEMENT VIEW (MASTER MONITORING) ---
+    if st.session_state.role == "GM Management":
+        st.markdown("<h1 style='text-align: center;'>📊 GM MASTER MONITORING</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center;'>Real-time tracking of BOM and Non-BOM Procurement streams.</p>", unsafe_allow_html=True)
+        
+        # Dual Uploaders for Side-by-Side Comparison
+        col_bom, col_nbom = st.columns(2)
+        
+        with col_bom:
+            st.subheader("📦 BOM Team Stream")
+            file_bom = st.file_uploader("Upload BOM CSV", type=["csv"], key="bom_up")
+            if file_bom:
+                df_bom = pd.read_csv(file_bom)
+                st.metric("BOM Items", len(df_bom))
+                st.dataframe(df_bom, height=400)
+            else:
+                st.info("Awaiting BOM data...")
 
-    if uploaded_file:
-        try:
-            # We wrap the data loading in a try block to prevent crashing on corrupt files
-            df = pd.read_csv(uploaded_file)
-            
-            # Privacy Filter: Only show data relevant to the role?
-            # (Optional: You can hide columns here if you want)
-            
-            st.markdown("### 📊 Active Procurement Stream")
-            
-            # Quick Analytics
-            stat1, stat2 = st.columns(2)
-            stat1.metric("Total Items", f"{len(df)}")
-            stat2.metric("Security Level", "High-Priority")
-
-            # Search bar with protection
-            query = st.text_input("🔍 Secure Search")
-            if query:
-                df = df[df.astype(str).apply(lambda x: x.str.contains(query, case=False)).any(axis=1)]
-            
-            st.dataframe(df, use_container_width=True, hide_index=True)
-            
-        except Exception as e:
-            st.error("Critical Error: The file structure is not recognized.")
-    else:
-        st.info("Awaiting secure file input. Please upload the .csv database to begin analysis.")
+        with col_nbom:
+            st.subheader("🛠 Non-BOM Team Stream")
+            file_nbom = st.file_uploader("Upload Non-BOM CSV", type=["csv"], key="
