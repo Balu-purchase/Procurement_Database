@@ -39,7 +39,6 @@ if not st.session_state.auth:
             upw = st.text_input("Password", type="password")
             
             if st.button("ENTER SYSTEM", use_container_width=True, key="login_btn"):
-                # Complete Credentials Dictionary
                 credentials = {
                     "BOMTEAM": "BOM123", 
                     "NONBOMTEAM": "NONBOM123", 
@@ -58,13 +57,3 @@ else:
     # Sidebar for logout
     st.sidebar.title(f"👤 {st.session_state.role}")
     if st.sidebar.button("Logout"):
-        st.session_state.auth = False
-        st.session_state.role = None
-        st.rerun()
-
-    st.title("Factory Procurement Dashboard")
-    st.divider()
-
-    # --- ROLE: BOM TEAM ---
-    if st.session_state.role == "BOMTEAM":
-        st.subheader("🛠️ BOM
