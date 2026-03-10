@@ -57,24 +57,11 @@ else:
         st.session_state.role = None
         st.rerun()
 
-    # Fixed the string literal error here
     st.title("Factory Procurement Dashboard")
     st.divider()
 
-    # Dashboard Logic for different roles
+    # Dashboard Logic
     if st.session_state.role == "BOMTEAM":
         st.subheader("🛠️ BOM Team: New Request")
         with st.form("bom_form", clear_on_submit=True):
-            item = st.text_input("Material Description")
-            qty = st.number_input("Quantity Required", min_value=1)
-            uom = st.selectbox("Unit of Measure", ["Nos", "KG", "Mtr", "Ltr"])
-            if st.form_submit_button("Submit to HOD"):
-                st.session_state.bom_list.append({"Item": item, "Qty": qty, "UOM": uom, "Status": "Pending"})
-                st.success(f"Request for {item} submitted!")
-
-    elif st.session_state.role == "HOD":
-        st.subheader("📋 HOD: Approval Queue")
-        
-        # This handles the case where the HOD sees more than just the title
-        if st.session_state.bom_list:
-            df
+            item = st.text_input("Material Description
