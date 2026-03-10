@@ -54,4 +54,19 @@ else:
     st.sidebar.title(f"👤 {st.session_state.role}")
     if st.sidebar.button("Logout"):
         st.session_state.auth = False
-        st
+        st.session_state.role = None
+        st.rerun()
+
+    st.title("Factory Procurement Dashboard")
+    st.divider()
+
+    # --- ROLE-BASED CONTENT ---
+    if st.session_state.role == "BOMTEAM":
+        st.subheader("🛠️ BOM Team: New Request")
+        with st.form("bom_form", clear_on_submit=True):
+            item = st.text_input("Material Description")
+            qty = st.number_input("Quantity Required", min_value=1)
+            uom = st.selectbox("Unit of Measure", ["Nos", "KG", "Mtr", "Ltr"])
+            
+            if st.form_submit_button("Submit to HOD"):
+                new_data
