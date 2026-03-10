@@ -106,7 +106,7 @@ else:
     # --- HOD DASHBOARD ---
     elif st.session_state.role == "HOD":
         if menu == "BOM":
-            st.header("📋 HOD: BOM APPROVAL QUEUE")
+            st.header("📋 HOD: PRICE APPROVAL PENDING REQUESTS ")
             if not st.session_state.master_data:
                 st.info("No pending requests.")
             else:
