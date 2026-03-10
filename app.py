@@ -39,8 +39,4 @@ if not st.session_state.auth:
             upw = st.text_input("Password", type="password")
             
             if st.button("ENTER SYSTEM", use_container_width=True, key="login_btn"):
-                credentials = {"BOMTEAM": "BOM123", "NONBOMTEAM": "NONBOM123", "HOD": "HOD789"}
-                
-                if uid in credentials and credentials[uid] == upw:
-                    st.session_state.auth = True
-                    st.
+                credentials = {"B
