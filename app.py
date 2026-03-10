@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# Optional: Plotly for charts (Safely handled)
+# Optional: Plotly for charts
 try:
     import plotly.express as px
     HAS_PLOTLY = True
@@ -12,11 +12,11 @@ except ImportError:
 # --- 1. INITIALIZATION ---
 st.set_page_config(page_title="Factory Procurement Portal", layout="wide")
 
-# Initialize session state for data persistence
+# Persistent state management
 state_keys = {
     "auth": False, "role": None, "master_data": [], 
     "daily_tracker": [], "advance_payments": [], 
-    "mis_data": [], "nb_choice": "DAILY"
+    "mis_data": [], "nb_choice": None # Changed to None to force a selection
 }
 for key, default in state_keys.items():
     if key not in st.session_state:
@@ -71,9 +71,12 @@ if not st.session_state.auth:
 # --- 3. DASHBOARD PAGE ---
 else:
     st.sidebar.title(f"👤 {st.session_state.role}")
+    
+    # Navigation logic
     if st.session_state.role in ["HOD", "GM_OFFICE"]:
         menu = st.sidebar.radio("GO TO", ["BOM", "NONBOM", "AUDIT LOGS"])
-    else: menu = "MAIN"
+    else:
+        menu = "MAIN"
 
     if st.sidebar.button("Logout"):
         st.session_state.auth = False
@@ -87,4 +90,4 @@ else:
         st.header("🛠️ BOM Team: Manual Entry")
         with st.container(border=True):
             r1c1, r1c2, r1c3, r1c4 = st.columns(4)
-            proj, pnum, desc, qps = r1c1.text_input("PROJECT"), r1c2.text_input("PART NUMBER"), r1c3.text_input("DESCRIPTION"), r1c4.text_input
+            p_proj, p_num, p_desc, p_qps = r1c1.text_input("PROJECT"), r1c2.text_input("PART NUMBER"), r1c3.text_input("DESCRIPTION"), r1c4.text_input
