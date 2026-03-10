@@ -50,10 +50,16 @@ else:
         st.session_state.auth = False
         st.rerun()
 
+    # SIDEBAR NAVIGATION FOR HOD/GM
+    if st.session_state.role in ["HOD", "GM_OFFICE"]:
+        menu = st.sidebar.radio("NAVIGATE", ["BOM APPROVALS", "NON-BOM REVIEW", "AUDIT LOGS"])
+    else:
+        menu = "MAIN"
+
     st.title("Factory Procurement Dashboard")
     st.divider()
 
-    # --- 🔵 BOM TEAM MODULE (FULLY RESTORED) ---
+    # --- 🔵 BOM TEAM MODULE ---
     if st.session_state.role == "BOMTEAM":
         st.header("🛠️ BOM Team: Manual Entry")
         with st.container(border=True):
@@ -62,91 +68,59 @@ else:
             p_num = r1c2.text_input("PART NUMBER")
             p_desc = r1c3.text_input("DESCRIPTION")
             p_qps = r1c4.text_input("QPS")
-            
             r2c1, r2c2, r2c3, r2c4 = st.columns(4)
             p_uom = r2c1.selectbox("UOM", ["Nos", "KG", "Mtr", "Ltr"])
             p_supp = r2c2.text_input("SUPPLIER NAME")
             p_price = r2c3.text_input("PRICE")
             p_opt = r2c4.text_input("OPTIONAL SUPPLIER")
-            
             if st.button("SUBMIT BOM REQUEST", type="primary"):
                 st.session_state.master_data.append({
                     "PROJECT": p_proj, "PARTNUMBER": p_num, "DESCRIPTION": p_desc, 
                     "QPS": p_qps, "UOM": p_uom, "SUPPLIER": p_supp, "PRICE": p_price, 
                     "OPT_SUPP": p_opt, "HOD APPROVAL": "", "GM APPROVAL": "", "STATUS": "PENDING"
                 })
-                st.success("BOM Entry Submitted Successfully!")
-                st.rerun()
-        
-        st.subheader("📋 My Submitted BOM Requests")
+                st.success("BOM Entry Submitted!"); st.rerun()
+        st.subheader("📋 Status Table")
         if st.session_state.master_data:
-            df_bom = pd.DataFrame(st.session_state.master_data)
-            st.dataframe(df_bom.style.applymap(style_status, subset=['STATUS']), use_container_width=True)
+            st.dataframe(pd.DataFrame(st.session_state.master_data).style.applymap(style_status, subset=['STATUS']), use_container_width=True)
 
-    # --- 🟢 NON-BOM TEAM MODULE (WITH FIXED TABLES) ---
+    # --- 🟢 NON-BOM TEAM MODULE ---
     elif st.session_state.role == "NONBOMTEAM":
-        st.header("📦 Non-BOM Activity Management")
-        nb_tab1, nb_tab2, nb_tab3 = st.tabs(["📅 DAILY TRACKER", "💳 ADVANCE PAYMENT", "📊 MIS TRACKER"])
-        
-        with nb_tab1:
-            st.subheader("PR to PO Daily Entry")
-            with st.form("dt_form_nb", clear_on_submit=True):
+        st.header("📦 Non-BOM Management")
+        t1, t2, t3 = st.tabs(["📅 DAILY TRACKER", "💳 ADVANCE PAYMENT", "📊 MIS TRACKER"])
+        with t1:
+            with st.form("dt_nb"):
                 c1, c2, c3, c4 = st.columns(4)
-                d_date = c1.date_input("DATE")
-                d_plant = c2.text_input("PLANT")
-                d_pr = c3.number_input("PR RECEIPTS", min_value=0)
-                d_po = c4.number_input("PO DONE", min_value=0)
-                if st.form_submit_button("SUBMIT RECORD"):
-                    st.session_state.daily_tracker.append({
-                        "S.NO": len(st.session_state.daily_tracker)+1, "DATE": str(d_date), 
-                        "PLANT": d_plant, "PR RECEIPTS": d_pr, "PO DONE": d_po, 
-                        "BALANCE PR'S": d_pr - d_po, "HOD COMMENTS": ""
-                    })
+                d_d, d_p = c1.date_input("DATE"), c2.text_input("PLANT")
+                d_r, d_o = c3.number_input("PR RECEIPTS", min_value=0), c4.number_input("PO DONE", min_value=0)
+                if st.form_submit_button("SUBMIT"):
+                    st.session_state.daily_tracker.append({"S.NO": len(st.session_state.daily_tracker)+1, "DATE": str(d_d), "PLANT": d_p, "PR RECEIPTS": d_r, "PO DONE": d_o, "BALANCE PR'S": d_r - d_o, "HOD COMMENTS": ""})
                     st.rerun()
-            st.write("### Current Daily Records")
-            if st.session_state.daily_tracker:
-                st.table(pd.DataFrame(st.session_state.daily_tracker))
-
-        with nb_tab2:
-            st.subheader("Advance Payment Entry")
-            with st.form("adv_form_nb", clear_on_submit=True):
-                c1, c2, c3 = st.columns(3); s_d, v_n, v_t = c1.date_input("SUBMIT DATE"), c2.text_input("VENDOR NAME"), c3.selectbox("TYPE", ["BOM", "NONBOM"])
+            st.table(pd.DataFrame(st.session_state.daily_tracker))
+        with t2:
+            with st.form("adv_nb"):
+                c1, c2, c3 = st.columns(3); s_d, v_n, v_t = c1.date_input("SUBMIT DATE"), c2.text_input("VENDOR"), c3.selectbox("TYPE", ["BOM", "NONBOM"])
                 c4, c5, c6 = st.columns(3); pi_n, pi_d, po_n = c4.text_input("PI NO"), c5.date_input("PI DATE"), c6.text_input("PO NO")
-                c7, c8, c9 = st.columns(3); po_d, p_amt, p_rem = c7.date_input("PO DATE"), c8.number_input("AMOUNT"), c9.text_input("REMARKS")
+                c7, c8, c9 = st.columns(3); po_d, p_a, p_r = c7.date_input("PO DATE"), c8.number_input("AMOUNT"), c9.text_input("REMARKS")
                 if st.form_submit_button("SUBMIT ADVANCE"):
-                    st.session_state.advance_payments.append({
-                        "SUBMIT DATE": str(s_d), "VENDOR NAME": v_n, "TYPE": v_t, "PI NO": pi_n, 
-                        "PI DATE": str(pi_d), "PO NO": po_n, "PO DATE": str(po_d), "AMOUNT": p_amt, 
-                        "REMARKS": p_rem, "PAYMENT STATUS": "PENDING", "MATERIAL STATUS": "PENDING"
-                    })
+                    st.session_state.advance_payments.append({"SUBMIT DATE": str(s_d), "VENDOR NAME": v_n, "TYPE": v_t, "PI NO": pi_n, "PI DATE": str(pi_d), "PO NO": po_n, "PO DATE": str(po_d), "AMOUNT": p_a, "REMARKS": p_r, "PAYMENT STATUS": "PENDING"})
                     st.rerun()
-            st.write("### Submitted Advance Requests")
-            if st.session_state.advance_payments:
-                st.dataframe(pd.DataFrame(st.session_state.advance_payments).style.applymap(apply_payment_colors), use_container_width=True)
-
-        with nb_tab3:
-            st.subheader("MIS Database")
-            df_mis = pd.DataFrame(st.session_state.mis_data, columns=[
-                "SUBMIT DATE", "VENDOR NAME", "TYPE", "PART NUMBER", "MATERIAL DESCRIPTION", 
-                "TOTAL QTY", "RECEIVED QTY", "PENDING QTY", "STATUS", "HOD COMMENTS"
-            ])
+            st.dataframe(pd.DataFrame(st.session_state.advance_payments).style.applymap(apply_payment_colors), use_container_width=True)
+        with t3:
+            df_mis = pd.DataFrame(st.session_state.mis_data, columns=["SUBMIT DATE", "VENDOR NAME", "TYPE", "PART NUMBER", "MATERIAL DESCRIPTION", "TOTAL QTY", "RECEIVED QTY", "PENDING QTY", "STATUS", "HOD COMMENTS"])
             mis_edit = st.data_editor(df_mis, num_rows="dynamic", use_container_width=True)
-            if st.button("SAVE MIS UPDATES"): 
-                st.session_state.mis_data = mis_edit.to_dict('records')
-                st.success("Saved!"); st.rerun()
+            if st.button("SAVE MIS"): st.session_state.mis_data = mis_edit.to_dict('records'); st.rerun()
 
     # --- 🟠 HOD / GM MODULE ---
     elif st.session_state.role in ["HOD", "GM_OFFICE"]:
-        menu = st.sidebar.radio("NAVIGATE", ["BOM APPROVALS", "NON-BOM REVIEW"])
-        
         if menu == "BOM APPROVALS":
-            st.header("📋 BOM Price Approvals")
+            st.header("📋 Pending Price Approvals")
             for i, row in enumerate(st.session_state.master_data):
                 if (st.session_state.role == "HOD" and row["STATUS"] == "PENDING") or (st.session_state.role == "GM_OFFICE" and row["HOD APPROVAL"] == "APPROVED" and row["GM APPROVAL"] == ""):
                     with st.container(border=True):
                         st.write(f"**PROJECT:** {row['PROJECT']} | **PART:** {row['PARTNUMBER']} | **PRICE:** {row['PRICE']}")
-                        dec = st.selectbox("DECISION", ["PENDING", "APPROVED", "REJECTED"], key=f"h_bom_{i}")
-                        if st.button("SAVE DECISION", key=f"h_btn_{i}"):
+                        dec = st.selectbox("DECISION", ["PENDING", "APPROVED", "REJECTED"], key=f"h_b_{i}")
+                        if st.button("CONFIRM", key=f"h_bt_{i}"):
                             if st.session_state.role == "HOD": st.session_state.master_data[i].update({"HOD APPROVAL": dec, "STATUS": dec})
                             else: st.session_state.master_data[i].update({"GM APPROVAL": dec, "STATUS": dec})
                             st.rerun()
@@ -157,7 +131,6 @@ else:
             if c1.button("📅 DAILY", use_container_width=True): st.session_state.nb_choice = "DAILY"
             if c2.button("💳 ADVANCE", use_container_width=True): st.session_state.nb_choice = "ADV"
             if c3.button("📊 MIS", use_container_width=True): st.session_state.nb_choice = "MIS"
-            
             st.divider()
             if st.session_state.nb_choice == "DAILY" and st.session_state.daily_tracker:
                 st.table(pd.DataFrame(st.session_state.daily_tracker))
@@ -165,3 +138,12 @@ else:
                 st.dataframe(pd.DataFrame(st.session_state.advance_payments).style.applymap(apply_payment_colors), use_container_width=True)
             elif st.session_state.nb_choice == "MIS" and st.session_state.mis_data:
                 st.dataframe(pd.DataFrame(st.session_state.mis_data).style.applymap(style_status, subset=['STATUS']), use_container_width=True)
+
+        elif menu == "AUDIT LOGS":
+            st.header("📁 Final Audit Logs (BOM)")
+            st.markdown("This section shows all final entries including those already Approved or Rejected.")
+            if st.session_state.master_data:
+                df_audit = pd.DataFrame(st.session_state.master_data)
+                st.dataframe(df_audit.style.applymap(style_status, subset=['STATUS']), use_container_width=True)
+            else:
+                st.info("No audit records available yet.")
