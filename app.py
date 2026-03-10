@@ -46,14 +46,35 @@ if not st.session_state.auth:
                     st.session_state.role = uid
                     st.rerun() 
                 else:
-                    st.error("Invalid Credentials.")
+                    st.error("Invalid Credentials. Please try again.")
 
 # --- 3. DASHBOARD PAGE ---
 else:
+    # Sidebar Logout
     st.sidebar.title(f"👤 {st.session_state.role}")
     if st.sidebar.button("Logout"):
         st.session_state.auth = False
         st.session_state.role = None
         st.rerun()
 
-    st.title("Factory
+    # Fixed the string literal error here
+    st.title("Factory Procurement Dashboard")
+    st.divider()
+
+    # Dashboard Logic for different roles
+    if st.session_state.role == "BOMTEAM":
+        st.subheader("🛠️ BOM Team: New Request")
+        with st.form("bom_form", clear_on_submit=True):
+            item = st.text_input("Material Description")
+            qty = st.number_input("Quantity Required", min_value=1)
+            uom = st.selectbox("Unit of Measure", ["Nos", "KG", "Mtr", "Ltr"])
+            if st.form_submit_button("Submit to HOD"):
+                st.session_state.bom_list.append({"Item": item, "Qty": qty, "UOM": uom, "Status": "Pending"})
+                st.success(f"Request for {item} submitted!")
+
+    elif st.session_state.role == "HOD":
+        st.subheader("📋 HOD: Approval Queue")
+        
+        # This handles the case where the HOD sees more than just the title
+        if st.session_state.bom_list:
+            df
