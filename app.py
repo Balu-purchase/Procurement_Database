@@ -35,7 +35,6 @@ if not st.session_state.auth:
         st.write("###")
         with st.container(border=True):
             st.markdown("<h2 style='text-align: center; color: #333;'>SYSTEM LOGIN</h2>", unsafe_allow_html=True)
-            # .strip().upper() handles accidental spaces or lowercase typing
             uid = st.text_input("Username").strip().upper() 
             upw = st.text_input("Password", type="password")
             
@@ -44,3 +43,4 @@ if not st.session_state.auth:
                 
                 if uid in credentials and credentials[uid] == upw:
                     st.session_state.auth = True
+                    st.session
