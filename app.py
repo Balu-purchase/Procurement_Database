@@ -35,64 +35,12 @@ if not st.session_state.auth:
         st.write("###")
         with st.container(border=True):
             st.markdown("<h2 style='text-align: center; color: #333;'>SYSTEM LOGIN</h2>", unsafe_allow_html=True)
-            uid = st.text_input("Username").strip().upper() # Auto-convert to UPPERCASE to match keys
+            # .strip().upper() handles accidental spaces or lowercase typing
+            uid = st.text_input("Username").strip().upper() 
             upw = st.text_input("Password", type="password")
             
-            if st.button("ENTER SYSTEM", use_container_width=True):
-                # Correct Spelling: CREDENTIALS
+            if st.button("ENTER SYSTEM", use_container_width=True, key="login_btn"):
                 credentials = {"BOMTEAM": "BOM123", "NONBOMTEAM": "NONBOM123", "HOD": "HOD789"}
                 
                 if uid in credentials and credentials[uid] == upw:
                     st.session_state.auth = True
-                    st.session_state.role = uid
-                    st.rerun()
-                else:
-                    st.error("Invalid Credentials. Please check Username/Password.")
-
-# --- 3. DASHBOARD PAGE ---
-else:
-    # Sidebar for logout
-    st.sidebar.title(f"👤 {st.session_state.role}")
-    if st.sidebar.button("Logout"):
-        st.session_state.auth = False
-        st.session_state.role = None
-        st.rerun()
-
-    st.title("Factory Procurement Dashboard")
-    st.divider()
-
-    # --- LOGIC TO PREVENT BLANK PAGE ---
-    if st.session_state.role == "BOMTEAM":
-        st.subheader("🛠️ BOM Team: New Request")
-        with st.form("bom_form", clear_on_submit=True):
-            item = st.text_input("Material Description")
-            qty = st.number_input("Quantity Required", min_value=1)
-            uom = st.selectbox("Unit of Measure", ["Nos", "KG", "Mtr", "Ltr"])
-            
-            if st.form_submit_button("Submit to HOD"):
-                new_data = {"Item": item, "Qty": qty, "UOM": uom, "Status": "Pending"}
-                st.session_state.bom_list.append(new_data)
-                st.success(f"Successfully submitted {item} for approval!")
-
-    elif st.session_state.role == "HOD":
-        st.subheader("📋 HOD: Approval Queue")
-        if st.session_state.bom_list:
-            df = pd.DataFrame(st.session_state.bom_list)
-            st.dataframe(df, use_container_width=True) # Using dataframe for better look
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("Approve All Items", type="primary"):
-                    st.session_state.bom_list = [] # Clearing for demo
-                    st.success("All items have been approved!")
-                    st.rerun()
-        else:
-            st.info("The approval queue is currently empty.")
-
-    elif st.session_state.role == "NONBOMTEAM":
-        st.subheader("📦 Non-BOM Team Dashboard")
-        st.write("Welcome to the Non-BOM procurement section.")
-
-    else:
-        # This handles cases where the role doesn't match the IF statements above
-        st.warning(f"Role '{st.session_state.role}' recognized, but no dashboard is configured for it.")
