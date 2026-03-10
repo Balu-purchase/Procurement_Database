@@ -129,7 +129,7 @@ else:
                                 st.rerun()
         
         elif menu == "AUDIT LOGS":
-            st.header("📁 AUDIT LOGS (DRAFT)")
+            st.header("📁 PRICE APPROVAL RECODS")
             if st.session_state.master_data:
                 df_audit = pd.DataFrame(st.session_state.master_data)
                 # Filter for only processed items
