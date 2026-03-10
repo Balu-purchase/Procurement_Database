@@ -30,16 +30,16 @@ if not st.session_state.auth:
     '''
     st.markdown(page_bg_img, unsafe_allow_html=True)
 
-    col_empty, col_login = st.columns([1.8, 1])
+    _, col_login = st.columns([1.8, 1])
     with col_login:
         st.write("###")
         with st.container(border=True):
             st.markdown("<h2 style='text-align: center; color: #333;'>SYSTEM LOGIN</h2>", unsafe_allow_html=True)
-            uid = st.text_input("Username")
+            uid = st.text_input("Username").strip().upper() # Auto-convert to UPPERCASE to match keys
             upw = st.text_input("Password", type="password")
             
             if st.button("ENTER SYSTEM", use_container_width=True):
-                # Using the correct spelling for Credentials
+                # Correct Spelling: CREDENTIALS
                 credentials = {"BOMTEAM": "BOM123", "NONBOMTEAM": "NONBOM123", "HOD": "HOD789"}
                 
                 if uid in credentials and credentials[uid] == upw:
@@ -47,11 +47,11 @@ if not st.session_state.auth:
                     st.session_state.role = uid
                     st.rerun()
                 else:
-                    st.error("Invalid Credentials")
+                    st.error("Invalid Credentials. Please check Username/Password.")
 
-# --- 3. DASHBOARD PAGE (Notice this 'else' is aligned with 'if not st.session_state.auth') ---
+# --- 3. DASHBOARD PAGE ---
 else:
-    # Sidebar for navigation and logout
+    # Sidebar for logout
     st.sidebar.title(f"👤 {st.session_state.role}")
     if st.sidebar.button("Logout"):
         st.session_state.auth = False
@@ -59,11 +59,11 @@ else:
         st.rerun()
 
     st.title("Factory Procurement Dashboard")
+    st.divider()
 
+    # --- LOGIC TO PREVENT BLANK PAGE ---
     if st.session_state.role == "BOMTEAM":
-        st.subheader("BOM Submission Form")
-        with st.form("bom_form"):
-            item = st.text_input("Item Description")
-            qty = st.number_input("Quantity", min_value=1)
-            if st.form_submit_button("Submit Request"):
-                st
+        st.subheader("🛠️ BOM Team: New Request")
+        with st.form("bom_form", clear_on_submit=True):
+            item = st.text_input("Material Description")
+            qty = st.number_input("Quantity Required", min_value=1)
