@@ -43,12 +43,4 @@ if not st.session_state.auth:
                 
                 if uid in credentials and credentials[uid] == upw:
                     st.session_state.auth = True
-                    st.session_state.role = uid
-                    st.rerun() 
-                else:
-                    st.error("Invalid Credentials. Please try again.")
-
-# --- 3. DASHBOARD PAGE ---
-else:
-    # Sidebar for logout
-    st.sidebar.title(f"👤 {st.session_state.role
+                    st.
