@@ -54,6 +54,44 @@ if not st.session_state.auth:
 
 # --- 3. DASHBOARD PAGE ---
 else:
-    # Sidebar for logout
+    # Sidebar Logout - Notice the 4-space indentation for the actions below
     st.sidebar.title(f"👤 {st.session_state.role}")
     if st.sidebar.button("Logout"):
+        st.session_state.auth = False
+        st.session_state.role = None
+        st.rerun()
+
+    st.title("Factory Procurement Dashboard")
+    st.divider()
+
+    # --- ROLE-BASED DASHBOARDS ---
+    if st.session_state.role == "BOMTEAM":
+        st.subheader("🛠️ BOM Team: New Request")
+        with st.form("bom_form", clear_on_submit=True):
+            item = st.text_input("Material Description")
+            qty = st.number_input("Quantity Required", min_value=1)
+            uom = st.selectbox("Unit of Measure", ["Nos", "KG", "Mtr", "Ltr"])
+            
+            if st.form_submit_button("Submit to HOD"):
+                new_entry = {"Item": item, "Qty": qty, "UOM": uom, "Status": "Pending"}
+                st.session_state.bom_list.append(new_entry)
+                st.success(f"Successfully submitted {item} for approval!")
+
+    elif st.session_state.role == "HOD":
+        st.subheader("📋 HOD: Approval Queue")
+        
+        # This handles the empty queue scenario
+        if len(st.session_state.bom_list) > 0:
+            df_display = pd.DataFrame(st.session_state.bom_list)
+            st.table(df_display) 
+            
+            if st.button("Approve All Items", type="primary"):
+                st.session_state.bom_list = [] 
+                st.success("All items have been approved!")
+                st.rerun()
+        else:
+            st.info("The approval queue is currently empty. No pending requests from BOM Team.")
+
+    elif st.session_state.role == "NONBOMTEAM":
+        st.subheader("📦 Non-BOM Team Dashboard")
+        st.info("Welcome! Non-BOM procurement module is active.")
