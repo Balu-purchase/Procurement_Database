@@ -4,7 +4,7 @@ import pandas as pd
 # --- 1. INITIALIZATION ---
 st.set_page_config(page_title="Factory Procurement Portal", layout="wide")
 
-# Ensure all session variables exist to prevent startup crashes
+# Ensure all session variables exist
 if "auth" not in st.session_state:
     st.session_state.auth = False
 if "role" not in st.session_state:
@@ -14,35 +14,50 @@ if "hod_view" not in st.session_state:
 if "bom_list" not in st.session_state:
     st.session_state.bom_list = []
 
-# --- 2. LOGIN SYSTEM ---
+# --- 2. SIDE-ALIGNED LOGIN INTERFACE ---
 if not st.session_state.auth:
-    st.title("🏭 Factory Management Login")
-    with st.container(border=True):
-        uid = st.text_input("Username")
-        upw = st.text_input("Password", type="password")
-        if st.button("LOG IN", use_container_width=True):
-            # User credentials
-            creds = {"BOMTEAM": "BOM123", "NONBOMTEAM": "NONBOM123", "HOD": "HOD789"}
-            if uid in creds and creds[uid] == upw:
-                st.session_state.auth = True
-                st.session_state.role = uid
-                st.rerun()
-            else:
-                st.error("Invalid Username or Password.")
+    # Create two columns: Left for Industry Image/Text, Right for Login
+    col_img, col_login = st.columns([2, 1], gap="large")
+
+    with col_img:
+        st.title("🏭 Industrial Procurement & Inventory System")
+        st.markdown("""
+        ### Strategic Supply Chain Management
+        * Real-time BOM Approval Tracking
+        * Daily Non-BOM Activity Logging
+        * Multi-level HOD & GM Verification
+        """)
+        # Industrial visual placeholder
+        st.image("https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=1000", 
+                 caption="Factory Smart Procurement Dashboard")
+
+    with col_login:
+        st.write("### 🔐 Secure Access")
+        with st.container(border=True):
+            uid = st.text_input("Username")
+            upw = st.text_input("Password", type="password")
+            if st.button("ENTER PORTAL", use_container_width=True):
+                # User credentials
+                creds = {"BOMTEAM": "BOM123", "NONBOMTEAM": "NONBOM123", "HOD": "HOD789"}
+                if uid in creds and creds[uid] == upw:
+                    st.session_state.auth = True
+                    st.session_state.role = uid
+                    st.rerun()
+                else:
+                    st.error("Invalid Username or Password.")
     st.stop()
 
-# Set current role
+# --- 3. DASHBOARD (POST-LOGIN) ---
 role = st.session_state.role
 st.sidebar.title(f"👤 {role}")
 if st.sidebar.button("Logout"):
     st.session_state.auth = False
     st.rerun()
 
-# --- 3. BOM TEAM VIEW ---
+# --- 4. BOM TEAM VIEW ---
 if role == "BOMTEAM":
-    st.header("📦 PRICE APPROVAL- ENTRY LOG ")
+    st.header("📦 BOM TEAM - Data Entry")
     
-    # Entry Form
     with st.expander("➕ Add New Entry to Table", expanded=True):
         with st.form("bom_entry_form", clear_on_submit=True):
             c1, c2 = st.columns(2)
@@ -65,28 +80,20 @@ if role == "BOMTEAM":
                         "GM APPROVAL": ""
                     }
                     st.session_state.bom_list.append(new_entry)
-                    st.success("Entry added!")
+                    st.success("Entry added to live table!")
                     st.rerun()
                 else:
                     st.warning("Please enter Vendor and Part Number.")
 
     st.divider()
-    
-    # Reflect the table below the form
-    st.subheader("📋 PRICE APPROVAL STATUS ")
+    st.subheader("📋 CURRENT BOM RECORD")
     if st.session_state.bom_list:
         df_display = pd.DataFrame(st.session_state.bom_list)
         st.dataframe(df_display, use_container_width=True, hide_index=True)
-        
-        # Sidebar option to delete the last row if a mistake was made
-        if st.sidebar.button("🗑️ Delete Last Entry"):
-            if st.session_state.bom_list:
-                st.session_state.bom_list.pop()
-                st.rerun()
     else:
         st.info("No data entered. Add items using the form above.")
 
-# --- 4. HOD VIEW ---
+# --- 5. HOD VIEW ---
 elif role == "HOD":
     st.title("👨‍💼 HOD COMMAND CENTER")
     
@@ -99,8 +106,6 @@ elif role == "HOD":
         if st.session_state.bom_list:
             st.subheader("BOM Price Approvals")
             df_hod = pd.DataFrame(st.session_state.bom_list)
-            
-            # HOD can edit the "HOD APPROVAL" column directly
             edited_df = st.data_editor(df_hod, use_container_width=True, hide_index=True)
             
             if st.button("💾 SAVE ALL CHANGES"):
