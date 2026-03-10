@@ -6,21 +6,15 @@ import plotly.express as px
 # --- 1. INITIALIZATION ---
 st.set_page_config(page_title="Factory Procurement Portal", layout="wide")
 
-# Initialize all session keys
-if "auth" not in st.session_state:
-    st.session_state.auth = False
-if "role" not in st.session_state:
-    st.session_state.role = None
-if "master_data" not in st.session_state:
-    st.session_state.master_data = []
-if "daily_tracker" not in st.session_state:
-    st.session_state.daily_tracker = []
-if "advance_payments" not in st.session_state:
-    st.session_state.advance_payments = []
-if "mis_data" not in st.session_state:
-    st.session_state.mis_data = []
-if "nb_choice" not in st.session_state:
-    st.session_state.nb_choice = "DAILY"
+# Persistent state management
+state_keys = {
+    "auth": False, "role": None, "master_data": [], 
+    "daily_tracker": [], "advance_payments": [], 
+    "mis_data": [], "nb_choice": "DAILY"
+}
+for key, default in state_keys.items():
+    if key not in st.session_state:
+        st.session_state[key] = default
 
 # --- Helper Functions for Styling ---
 def style_status(val):
@@ -82,7 +76,7 @@ else:
     st.title("Factory Procurement Dashboard")
     st.divider()
 
-    # --- BOM TEAM MODULE ---
+    # --- BOM TEAM MODULE (UNTOUCHED) ---
     if st.session_state.role == "BOMTEAM":
         st.header("🛠️ BOM Team: Manual Entry")
         with st.container(border=True):
@@ -99,7 +93,7 @@ else:
             df = pd.DataFrame(st.session_state.master_data)
             st.dataframe(df.style.applymap(style_status, subset=['STATUS']), use_container_width=True)
 
-    # --- NON-BOM TEAM MODULE ---
+    # --- NON-BOM TEAM MODULE (FIXED VIEW) ---
     elif st.session_state.role == "NONBOMTEAM":
         tab1, tab2, tab3 = st.tabs(["📅 DAILY TRACKER", "💳 ADVANCE PAYMENT", "📊 MIS"])
         
@@ -108,4 +102,43 @@ else:
             with st.form("dt_form", clear_on_submit=True):
                 c1, c2, c3, c4 = st.columns(4)
                 dt_date, dt_plant = c1.date_input("DATE"), c2.text_input("PLANT")
-                dt_pr,
+                dt_pr, dt_po = c3.number_input("PR RECEIPTS", min_value=0), c4.number_input("PO DONE", min_value=0)
+                if st.form_submit_button("SUBMIT TRACKER"):
+                    st.session_state.daily_tracker.append({"S.NO": len(st.session_state.daily_tracker)+1, "DATE": str(dt_date), "PLANT": dt_plant, "PR RECEIPTS": dt_pr, "PO DONE": dt_po, "BALANCE PR'S": dt_pr - dt_po, "HOD COMMENTS": ""})
+                    st.rerun()
+            st.write("### Submitted Daily Records")
+            st.table(pd.DataFrame(st.session_state.daily_tracker))
+
+        with tab2:
+            st.subheader("ADVANCE PAYMENT REQUESTS")
+            with st.form("adv_form", clear_on_submit=True):
+                c1, c2, c3 = st.columns(3); sub_date, vend, vtype = c1.date_input("SUBMIT DATE"), c2.text_input("VENDOR NAME"), c3.selectbox("TYPE", ["BOM", "NONBOM"])
+                c4, c5, c6 = st.columns(3); pi_no, pi_date, po_no = c4.text_input("PI/INVOICE NO"), c5.date_input("INVOICE DATE"), c6.text_input("PO NO")
+                c7, c8, c9 = st.columns(3); po_date, amt, rems = c7.date_input("PO DATE"), c8.number_input("AMOUNT"), c9.text_input("REMARKS")
+                if st.form_submit_button("SUBMIT ADVANCE REQUEST"):
+                    st.session_state.advance_payments.append({
+                        "SUBMIT DATE": str(sub_date), "VENDOR NAME": vend, "TYPE": vtype, "PI NO": pi_no, "INVOICE DATE": str(pi_date),
+                        "PO NO": po_no, "PO DATE": str(po_date), "AMOUNT": amt, "REMARKS": rems, 
+                        "PAYMENT STATUS": "PENDING", "PAY DATE": "", "MATERIAL STATUS": "PENDING", "GRN NO": "", "ACCOUNTING": "PENDING"
+                    })
+                    st.rerun()
+            st.write("### Submitted Advance Payment Requests")
+            if st.session_state.advance_payments:
+                df_p = pd.DataFrame(st.session_state.advance_payments)
+                st.dataframe(df_p.style.applymap(apply_payment_colors), use_container_width=True)
+
+        with tab3:
+            st.subheader("MIS TRACKER (EXCEL GRID)")
+            mis_edit = st.data_editor(pd.DataFrame(st.session_state.mis_data, columns=["SUBMIT DATE", "VENDOR NAME", "TYPE", "PART NUMBER", "MATERIAL DESCRIPTION", "TOTAL QTY", "RECEIVED QTY", "PENDING QTY", "STATUS", "HOD COMMENTS"]), num_rows="dynamic")
+            if st.button("SAVE MIS CHANGES"): 
+                st.session_state.mis_data = mis_edit.to_dict('records')
+                st.success("MIS Database Updated!")
+                st.rerun()
+
+    # --- HOD & GM MODULE ---
+    elif st.session_state.role in ["HOD", "GM_OFFICE"]:
+        if menu == "NONBOM":
+            st.subheader("Select Non-BOM Category")
+            ic1, ic2, ic3 = st.columns(3)
+            if ic1.button("📅 DAILY TRACKER", use_container_width=True): st.session_state.nb_choice = "DAILY"
+            if ic2.button("💳 ADVANCE PAYMENT", use_container_width=True): st.
