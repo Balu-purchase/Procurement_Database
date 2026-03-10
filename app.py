@@ -35,22 +35,23 @@ if not st.session_state.auth:
         st.write("###")
         with st.container(border=True):
             st.markdown("<h2 style='text-align: center; color: #333;'>SYSTEM LOGIN</h2>", unsafe_allow_html=True)
-            # .strip().upper() handles accidental spaces or lowercase typing
             uid = st.text_input("Username").strip().upper() 
             upw = st.text_input("Password", type="password")
             
             if st.button("ENTER SYSTEM", use_container_width=True, key="login_btn"):
-                # Correct Spelling: CREDENTIALS
                 credentials = {"BOMTEAM": "BOM123", "NONBOMTEAM": "NONBOM123", "HOD": "HOD789"}
                 
                 if uid in credentials and credentials[uid] == upw:
                     st.session_state.auth = True
                     st.session_state.role = uid
-                    st.rerun() # Refresh to enter the dashboard
+                    st.rerun() 
                 else:
                     st.error("Invalid Credentials. Please check Username/Password.")
 
 # --- 3. DASHBOARD PAGE ---
 else:
     # Sidebar for logout
-    st.
+    st.sidebar.title(f"👤 {st.session_state.role}")
+    if st.sidebar.button("Logout"):
+        st.session_state.auth = False
+        st
