@@ -40,7 +40,7 @@ if st.sidebar.button("Logout"):
 
 # --- 3. BOM TEAM VIEW ---
 if role == "BOMTEAM":
-    st.header("📦 BOM TEAM - Data Entry")
+    st.header("📦 PRICE APPROVAL- ENTRY LOG ")
     
     # Entry Form
     with st.expander("➕ Add New Entry to Table", expanded=True):
@@ -73,7 +73,7 @@ if role == "BOMTEAM":
     st.divider()
     
     # Reflect the table below the form
-    st.subheader("📋 CURRENT BOM RECORD")
+    st.subheader("📋 PRICE APPROVAL STATUS ")
     if st.session_state.bom_list:
         df_display = pd.DataFrame(st.session_state.bom_list)
         st.dataframe(df_display, use_container_width=True, hide_index=True)
