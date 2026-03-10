@@ -2,107 +2,139 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# 1. SETUP
-st.set_page_config(page_title="BOM Approval", layout="wide")
+# --- 1. PAGE SETUP ---
+st.set_page_config(page_title="Factory Approval System", layout="wide")
 
-# 2. CONFIG
-H_N = "Bixapathi"
-H_D = "Head of Department (HOD)"
-G_N = "General Manager"
+# --- 2. INTERNAL STORAGE (The "Website Database") ---
+# This initializes empty lists to store data if they don't exist yet
+if "bom_db" not in st.session_state:
+    st.session_state.bom_db = []
+if "non_bom_db" not in st.session_state:
+    st.session_state.non_bom_db = []
 
-# 3. LOGIN
+# --- 3. LOGIN SYSTEM ---
 if "auth" not in st.session_state:
     st.session_state.auth = False
 
 if not st.session_state.auth:
-    st.sidebar.title("🔐 OFFICIAL LOGIN")
-    uid = st.sidebar.text_input("ID")
-    upw = st.sidebar.text_input("PW", type="password")
-    if st.sidebar.button("LOG IN"):
-        db = {"hod_office": "HOD789", "gm_office": "GM2026"}
-        if uid in db and db[uid] == upw:
+    st.title("🔐 Factory Portal Login")
+    user = st.text_input("Username")
+    pw = st.text_input("Password", type="password")
+    if st.button("LOG IN"):
+        # Login Credentials
+        db = {"BOMTEAM": "BOM123", "NONBOMTEAM": "NONBOM123", "HOD": "HOD789"}
+        if user in db and db[user] == pw:
             st.session_state.auth = True
-            st.session_state.u_role = "HOD" if "hod" in uid else "GM"
+            st.session_state.role = user
             st.rerun()
+        else:
+            st.error("Invalid Username or Password")
     st.stop()
 
-# 4. DATA LOADING
-@st.cache_data(ttl=1)
-def load():
-    s = "1H43MSA3ff3KQ6QGVQLapkn9RjPR7e69V4s0JlOC_oI4"
-    g = "466678125"
-    u = "https://docs.google.com/spreadsheets/d/" + s + "/export?format=csv&gid=" + g
-    try:
-        df = pd.read_csv(u)
-        df.columns = df.columns.str.strip().str.upper()
-        return df
-    except:
-        return pd.DataFrame()
-
-df = load()
-
-# 5. NAVIGATION
-m = st.sidebar.radio("MENU", ["PENDING APPROVALS", "OFFICIAL RECORDS"])
-if st.sidebar.button("LOGOUT"):
+# --- 4. NAVIGATION & LOGOUT ---
+role = st.session_state.role
+st.sidebar.title(f"Welcome, {role}")
+if st.sidebar.button("Logout"):
     st.session_state.auth = False
     st.rerun()
 
-# 6. PENDING APPROVALS
-if m == "PENDING APPROVALS":
-    st.header("🏭 PENDING PRICE VERIFICATION")
-    role = st.session_state.get("u_role")
+# --- 5. NONBOM TEAM LOGIN ---
+if role == "NONBOMTEAM":
+    st.header("📋 NON-BOM Daily Activity")
+    with st.form("nb_form", clear_on_submit=True):
+        activity = st.text_area("Daily Activity Description")
+        requested = st.number_input("Items Purchased/Requested Today", min_value=0)
+        if st.form_submit_button("Submit Entry"):
+            entry = {
+                "Date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "Activity": activity,
+                "Qty": requested,
+                "HOD_Comment": "Waiting..."
+            }
+            st.session_state.non_bom_db.append(entry)
+            st.success("Activity submitted to HOD.")
+
+# --- 6. BOM TEAM LOGIN ---
+elif role == "BOMTEAM":
+    st.header("📦 BOM Price Approval Request")
+    with st.form("bom_form", clear_on_submit=True):
+        part = st.text_input("Part Number / Item Name")
+        vendor = st.text_input("Vendor Name")
+        price = st.text_input("Quoted Price")
+        if st.form_submit_button("Request Approval"):
+            entry = {
+                "Date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "Part": part,
+                "Vendor": vendor,
+                "Price": price,
+                "Status": "PENDING",
+                "HOD_Remarks": ""
+            }
+            st.session_state.bom_db.append(entry)
+            st.success("Price request sent to HOD.")
+
+# --- 7. HOD LOGIN (THE COMMAND CENTER) ---
+elif role == "HOD":
+    st.title("👨‍💼 HOD CONTROL PANEL")
     
-    if not df.empty:
-        # Determine which column to check based on who is logged in
-        T_C = "HOD APPROVAL" if role == "HOD" else "GM APPROVAL"
-        V_C, P_C, R_C, S_C = "VENDOR NAME", "PART NUMBER", "PRICE", "BOM STATUS"
-
-        # Show only rows where Approval is EMPTY (None/NaN)
-        p_df = df[df[T_C].isna() | (df[T_C].astype(str).str.strip() == "")]
-
-        if p_df.empty:
-            st.success("✅ No pending items. Everything is approved!")
-        else:
-            # Table Header
-            h1, h2, h3, h4, h5 = st.columns([2, 2, 1, 2, 1])
-            h1.subheader("VENDOR")
-            h2.subheader("PART NO")
-            h3.subheader("PRICE")
-            h4.subheader("SIGNATURE")
-            h5.subheader("ACTION")
-
-            for i, r in p_df.iterrows():
-                c1, c2, c3, c4, c5 = st.columns([2, 2, 1, 2, 1])
-                vn, pn, pr = str(r.get(V_C)), str(r.get(P_C)), str(r.get(R_C))
-                c1.write(vn)
-                c2.write(pn)
-                c3.write(pr)
-                
-                sig = c4.text_input("Sig", key="sig"+str(i), label_visibility="collapsed")
-                if c5.button("OK", key="btn"+str(i)):
-                    if sig.upper() in ["OK", "APPROVED", "OKAY"]:
-                        st.success("Successfully Approved: " + vn)
-                        st.info("Note: Update your Excel sheet to see this move permanently.")
-                st.divider()
-
-# 7. OFFICIAL RECORDS (READING DIRECTLY FROM EXCEL)
-else:
-    st.header("📜 OFFICIAL ARCHIVED RECORDS")
-    V_C, P_C, R_C, S_C = "VENDOR NAME", "PART NUMBER", "PRICE", "BOM STATUS"
+    # Navigation Icons
+    c1, c2, c3 = st.columns(3)
     
-    # Logic: If HOD APPROVAL contains "OK" or "APPROVED" in the Excel file
-    if not df.empty:
-        # Filter for rows that are ALREADY approved in the Google Sheet
-        mask = df["HOD APPROVAL"].astype(str).str.upper().isin(["OK", "APPROVED", "OKAY"])
-        approved_df = df[mask]
+    with c1:
+        if st.button("📊 NON-BOM ACTIVITY", use_container_width=True):
+            st.session_state.hod_view = "NONBOM"
+    with c2:
+        if st.button("📦 BOM APPROVALS", use_container_width=True):
+            st.session_state.hod_view = "BOM"
+    with c3:
+        if st.button("📜 AUDIT LOGS", use_container_width=True):
+            st.session_state.hod_view = "AUDIT"
 
-        if approved_df.empty:
-            st.warning("No records found in Excel with 'OK' or 'APPROVED' in the HOD column.")
+    # HOD VIEW LOGIC
+    view = st.session_state.get("hod_view", "NONBOM")
+
+    if view == "NONBOM":
+        st.subheader("Daily Activity Reports")
+        if not st.session_state.non_bom_db:
+            st.info("No reports yet.")
         else:
-            for _, r in approved_df.iterrows():
-                with st.container(border=True):
-                    st.success("VERIFIED BY: " + H_N)
-                    st.write("**VENDOR:** " + str(r.get(V_C)) + " | **PART:** " + str(r.get(P_C)))
-                    st.write("**PRICE:** " + str(r.get(R_C)) + " | **STATUS:** " + str(r.get(S_C)))
-                    st.write("**HOD COMMENT:** " + str(r.get("HOD APPROVAL")))
-                    st.markdown("*Digital Signature: " + H_N + "*")
+            for i, item in enumerate(st.session_state.non_bom_db):
+                with st.expander(f"Report: {item['Date']}"):
+                    st.write(f"**Activity:** {item['Activity']}")
+                    st.write(f"**Qty:** {item['Qty']}")
+                    new_com = st.text_input("HOD Comment", key=f"nb_{i}")
+                    if st.button("Save Comment", key=f"btn_nb_{i}"):
+                        st.session_state.non_bom_db[i]['HOD_Comment'] = new_com
+                        st.rerun()
+
+    elif view == "BOM":
+        st.subheader("Pending Price Approvals")
+        # Show only items that are PENDING
+        pending_bom = [i for i in st.session_state.bom_db if i['Status'] == "PENDING"]
+        if not pending_bom:
+            st.success("All prices approved!")
+        else:
+            for i, item in enumerate(st.session_state.bom_db):
+                if item['Status'] == "PENDING":
+                    with st.container(border=True):
+                        st.write(f"**Part:** {item['Part']} | **Price:** {item['Price']} | **Vendor:** {item['Vendor']}")
+                        rem = st.text_input("Remarks", key=f"rem_{i}")
+                        col_a, col_r = st.columns(2)
+                        if col_a.button("✅ APPROVE", key=f"app_{i}"):
+                            st.session_state.bom_db[i]['Status'] = "APPROVED"
+                            st.session_state.bom_db[i]['HOD_Remarks'] = rem
+                            st.rerun()
+                        if col_r.button("❌ REJECT", key=f"rej_{i}"):
+                            st.session_state.bom_db[i]['Status'] = "REJECTED"
+                            st.session_state.bom_db[i]['HOD_Remarks'] = rem
+                            st.rerun()
+
+    elif view == "AUDIT":
+        st.subheader("📜 Price Approval Audit Logs")
+        st.write("Record of all Approved and Rejected BOM prices.")
+        # Show only items that are NOT pending
+        audit_data = [i for i in st.session_state.bom_db if i['Status'] != "PENDING"]
+        if audit_data:
+            st.table(pd.DataFrame(audit_data))
+        else:
+            st.warning("No audit records found yet.")
