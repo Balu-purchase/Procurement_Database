@@ -50,5 +50,17 @@ if not st.session_state.auth:
 
 # --- 3. DASHBOARD PAGE ---
 else:
-    # Sidebar for logout
-    st.sidebar.title(f"👤 {st
+    # Sidebar for logout - FIXED THE F-STRING HERE
+    st.sidebar.title(f"👤 {st.session_state.role}")
+    if st.sidebar.button("Logout"):
+        st.session_state.auth = False
+        st.session_state.role = None
+        st.rerun()
+
+    st.title("Factory Procurement Dashboard")
+    st.divider()
+
+    # --- ROLE-BASED DASHBOARDS ---
+    if st.session_state.role == "BOMTEAM":
+        st.subheader("🛠️ BOM Team: New Request")
+        with st.form("bom_form", clear_on_submit=True):
