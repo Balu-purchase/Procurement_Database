@@ -5,7 +5,7 @@ from datetime import datetime
 # --- 1. INITIALIZATION ---
 st.set_page_config(page_title="Factory Procurement Portal", layout="wide")
 
-# Persistent lists ensure previous data is not lost
+# Persistent lists ensure previous data is not lost during session switches
 if "master_data" not in st.session_state: st.session_state.master_data = []
 if "daily_tracker" not in st.session_state: st.session_state.daily_tracker = []
 if "advance_payments" not in st.session_state: st.session_state.advance_payments = []
@@ -82,8 +82,9 @@ else:
         st.header(f"🖊️ {st.session_state.role} Approval Queue")
         has_pending = False
         for i, row in enumerate(st.session_state.master_data):
-            # FIXED SYNTAX ERROR HERE
-            show = (st.session_state.role == "HOD" and row["STATUS"] == "PENDING AT HOD") or (st.session_state.role == "GM_OFFICE" and row["STATUS"] == "PENDING AT GM")
+            # Waterfall Logic: GM only sees if HOD has signed
+            show = (st.session_state.role == "HOD" and row["STATUS"] == "PENDING AT HOD") or \
+                   (st.session_state.role == "GM_OFFICE" and row["STATUS"] == "PENDING AT GM")
             
             if show:
                 has_pending = True
@@ -91,4 +92,20 @@ else:
                     st.write(f"**VENDOR:** {row['VENDOR NAME']} | **PART:** {row['PART NUMBER']} | **PRICE:** {row['PRICE']}")
                     st.write(f"**QPS:** {row['QPS']} | **REMARKS:** {row['REMARKS']}")
                     c1, c2 = st.columns(2)
-                    if c1.button(f"✅ DIGITALLY SIGN AS {st.session_state.role}", key=f"s_{i
+                    # FIXED SYNTAX ERROR ON THE LINE BELOW
+                    if c1.button(f"✅ DIGITALLY SIGN AS {st.session_state.role}", key=f"s_{i}"):
+                        sig = get_signature()
+                        if st.session_state.role == "HOD":
+                            st.session_state.master_data[i].update({"HOD_SIGN": sig, "STATUS": "PENDING AT GM"})
+                        else:
+                            st.session_state.master_data[i].update({"GM_SIGN": sig, "STATUS": "SUCCESSFULLY APPROVED"})
+                        st.rerun()
+                    if c2.button(f"❌ REJECT", key=f"r_{i}"):
+                        st.session_state.master_data[i]["STATUS"] = f"REJECTED BY {st.session_state.role}"
+                        st.rerun()
+        if not has_pending: st.info("No pending tasks available.")
+
+    # --- 🟢 NON-BOM TEAM MODULE ---
+    elif st.session_state.role == "NONBOMTEAM":
+        st.header("📦 Non-BOM Activity Management")
+        t
