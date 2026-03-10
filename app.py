@@ -4,15 +4,15 @@ import pandas as pd
 # --- 1. INITIALIZATION ---
 st.set_page_config(page_title="Factory Procurement Portal", layout="wide")
 
-# Use lists for storage to avoid Pandas concat errors
+# Safe initialization of session state
 if "auth" not in st.session_state:
     st.session_state.auth = False
 if "role" not in st.session_state:
     st.session_state.role = None
 if "hod_view" not in st.session_state:
-    st.session_state.hod_view = "NONBOM"
+    st.session_state.hod_view = "BOM" # Default view
 if "bom_list" not in st.session_state:
-    st.session_state.bom_list = [] # Storing as a list is safer than an empty DF
+    st.session_state.bom_list = []
 if "nonbom_list" not in st.session_state:
     st.session_state.nonbom_list = []
 
@@ -32,6 +32,7 @@ if not st.session_state.auth:
                 st.error("Invalid Username or Password.")
     st.stop()
 
+# Role-based Navigation
 role = st.session_state.role
 st.sidebar.title(f"👤 {role}")
 if st.sidebar.button("Logout"):
@@ -40,30 +41,27 @@ if st.sidebar.button("Logout"):
 
 # --- 3. BOM TEAM VIEW ---
 if role == "BOMTEAM":
-    st.header("📦 BOM TEAM - Data Entry")
+    st.header("📦 BOM TEAM - Price Approval Entry")
     
-    with st.expander("➕ Add New Row", expanded=True):
-        with st.form("bom_entry_form", clear_on_submit=True):
-            c1, c2, c3 = st.columns(3)
-            vendor = c1.text_input("VENDOR NAME")
-            part = c2.text_input("PART NUMBER")
+    # Form to add data manually
+    with st.expander("➕ Add New Entry", expanded=True):
+        with st.form("bom_input_form", clear_on_submit=True):
+            c1, c2 = st.columns(2)
+            v_name = c1.text_input("VENDOR NAME")
+            p_num = c2.text_input("PART NUMBER")
+            
+            c3, c4 = st.columns(2)
             price = c3.text_input("PRICE")
-            bom_val = st.text_input("BOM")
+            bom_val = c4.text_input("BOM")
             
             if st.form_submit_button("Add to Table"):
                 new_entry = {
                     "S.NO": len(st.session_state.bom_list) + 1,
-                    "VENDOR NAME": vendor,
-                    "PART NUMBER": part,
+                    "VENDOR NAME": v_name,
+                    "PART NUMBER": p_num,
                     "PRICE": price,
                     "BOM": bom_val,
-                    "HOD APPROVAL": "",
-                    "GM APPROVAL": ""
+                    "HOD APPROVAL": "", # Empty for HOD to fill
+                    "GM APPROVAL": ""   # Empty for GM to fill
                 }
-                st.session_state.bom_list.append(new_entry)
-                st.success("Row added!")
-                st.rerun()
-
-    st.divider()
-    st.subheader("Current BOM Table")
-    if st.session_
+                st.session_state.bom_list.append(new
