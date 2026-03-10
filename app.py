@@ -70,7 +70,7 @@ else:
 
     # --- BOM TEAM DASHBOARD ---
     if st.session_state.role == "BOMTEAM":
-        st.header("🛠️ BOM Team: Manual Entry")
+        st.header("🛠️ REQUEST FOR PRICE APPROVAL : ENTRY ")
         
         with st.container(border=True):
             r1c1, r1c2, r1c3, r1c4 = st.columns(4)
