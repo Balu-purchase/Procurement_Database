@@ -5,7 +5,7 @@ from datetime import datetime
 # --- 1. INITIALIZATION ---
 st.set_page_config(page_title="Corporate Approval Portal", layout="wide")
 
-# Prevent AttributeError by initializing keys
+# Prevent AttributeError: Initialize session keys if they don't exist
 if "auth" not in st.session_state:
     st.session_state.auth = False
 if "role" not in st.session_state:
@@ -13,15 +13,15 @@ if "role" not in st.session_state:
 if "hod_view" not in st.session_state:
     st.session_state.hod_view = "NONBOM"
 
-# Internal Databases (Website-only storage)
+# Website-only database storage
 if "bom_db" not in st.session_state:
     st.session_state.bom_db = []
 if "non_bom_db" not in st.session_state:
     st.session_state.non_bom_db = []
 
-# --- 2. LOGIN INTERFACE ---
+# --- 2. LOGIN SYSTEM ---
 if not st.session_state.auth:
-    st.title("🏭 Factory Management Portal")
+    st.title("🏭 Factory Management Login")
     with st.container(border=True):
         uid = st.text_input("Username")
         upw = st.text_input("Password", type="password")
@@ -32,40 +32,25 @@ if not st.session_state.auth:
                 st.session_state.role = uid
                 st.rerun()
             else:
-                st.error("Invalid credentials.")
+                st.error("Invalid Username or Password.")
     st.stop()
 
-# Safe access to role after login
+# Safe access to role after login check
 role = st.session_state.role
 
-# Sidebar
+# Sidebar Logout
 st.sidebar.title(f"👤 {role}")
 if st.sidebar.button("Logout"):
     st.session_state.auth = False
     st.session_state.role = None
     st.rerun()
 
-# --- 3. NONBOM TEAM LOGIN ---
+# --- 3. NON-BOM TEAM INTERFACE ---
 if role == "NONBOMTEAM":
     st.header("📋 Non-BOM Daily Activity Log")
-    with st.form("nonbom_entry", clear_on_submit=True):
-        activity = st.text_area("Daily Activity / Purchase Requests")
+    with st.form("nonbom_form", clear_on_submit=True):
+        activity = st.text_area("Daily Activity / Purchase Requested")
         qty = st.number_input("Total Quantity", min_value=0)
         if st.form_submit_button("Submit to HOD"):
-            st.session_state.non_bom_db.append({
-                "Date": datetime.now().strftime("%d-%m-%Y %H:%M"),
-                "Activity": activity,
-                "Qty": qty,
-                "HOD_Comment": "PENDING"
-            })
-            st.success("Activity submitted!")
-
-# --- 4. BOM TEAM LOGIN ---
-elif role == "BOMTEAM":
-    st.header("💰 BOM Price Approval Request")
-    with st.form("bom_entry", clear_on_submit=True):
-        part = st.text_input("Part Number / Item Name")
-        vendor = st.text_input("Vendor Name")
-        price = st.text_input("Quoted Price")
-        if st.form_submit_button("Request Price Approval"):
-            st.session_state.bom_db.
+            entry = {
+                "Date": datetime.now().strftime("%d-%m
