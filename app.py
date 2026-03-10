@@ -16,7 +16,7 @@ st.set_page_config(page_title="Factory Procurement Portal", layout="wide")
 state_keys = {
     "auth": False, "role": None, "master_data": [], 
     "daily_tracker": [], "advance_payments": [], 
-    "mis_data": [], "nb_choice": None # Changed to None to force a selection
+    "mis_data": [], "nb_choice": "DAILY" 
 }
 for key, default in state_keys.items():
     if key not in st.session_state:
@@ -76,6 +76,7 @@ else:
     if st.session_state.role in ["HOD", "GM_OFFICE"]:
         menu = st.sidebar.radio("GO TO", ["BOM", "NONBOM", "AUDIT LOGS"])
     else:
+        # Default menu for Team roles so the page isn't blank
         menu = "MAIN"
 
     if st.sidebar.button("Logout"):
@@ -85,9 +86,23 @@ else:
     st.title("Factory Procurement Dashboard")
     st.divider()
 
-    # --- BOM TEAM MODULE ---
-    if st.session_state.role == "BOMTEAM":
-        st.header("🛠️ BOM Team: Manual Entry")
-        with st.container(border=True):
-            r1c1, r1c2, r1c3, r1c4 = st.columns(4)
-            p_proj, p_num, p_desc, p_qps = r1c1.text_input("PROJECT"), r1c2.text_input("PART NUMBER"), r1c3.text_input("DESCRIPTION"), r1c4.text_input
+    # --- 🟢 NON-BOM TEAM MODULE (FIXED) ---
+    if st.session_state.role == "NONBOMTEAM":
+        st.header("📦 Non-BOM Activity Management")
+        tab1, tab2, tab3 = st.tabs(["📅 DAILY TRACKER", "💳 ADVANCE PAYMENT", "📊 MIS TRACKER"])
+        
+        with tab1:
+            st.subheader("Daily PR to PO Tracker")
+            with st.form("dt_form", clear_on_submit=True):
+                c1, c2, c3, c4 = st.columns(4)
+                d_date = c1.date_input("DATE")
+                d_plant = c2.text_input("PLANT")
+                d_pr = c3.number_input("PR RECEIPTS", min_value=0)
+                d_po = c4.number_input("PO DONE", min_value=0)
+                if st.form_submit_button("SUBMIT ENTRY"):
+                    st.session_state.daily_tracker.append({
+                        "S.NO": len(st.session_state.daily_tracker)+1, "DATE": str(d_date), 
+                        "PLANT": d_plant, "PR RECEIPTS": d_pr, "PO DONE": d_po, 
+                        "BALANCE PR'S": d_pr - d_po, "HOD COMMENTS": ""
+                    })
+                    st.rerun()
