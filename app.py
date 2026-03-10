@@ -40,7 +40,7 @@ if not st.session_state.auth:
         st.write("###")
         with st.container(border=True):
             # Changed text color to dark for visibility on light background
-            st.markdown("<h2 style='text-align: center; color: #333;'>SYSTEM LOGIN</h2>", unsafe_allow_html=True)
+            st.markdown("<h2 style='text-align: center; color: #333;'>LOGIN CREDENTIALS </h2>", unsafe_allow_html=True)
             uid = st.text_input("Username")
             upw = st.text_input("Password", type="password")
             
