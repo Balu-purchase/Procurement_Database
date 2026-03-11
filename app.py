@@ -52,7 +52,7 @@ def send_email(to_email, subject, message):
         pass
 
 
-# ---------------- APPROVAL FILE GENERATOR ---------------- #
+# ---------------- APPROVAL FILE ---------------- #
 
 def generate_approval_file(row):
 
@@ -144,7 +144,13 @@ else:
     st.sidebar.image(LOGO_URL, width=120)
     st.sidebar.write("Logged in as:", role)
 
-# ---------------- BOM TEAM MODULE ---------------- #
+    # LOGOUT BUTTON
+    if st.sidebar.button("Logout"):
+        st.session_state.auth = False
+        st.rerun()
+
+
+# ---------------- BOM TEAM ---------------- #
 
     if role == "BOMTEAM":
 
@@ -159,10 +165,8 @@ else:
 
             qps = st.text_input("QPS")
 
-            bom_type = st.selectbox(
-                "BOM Type",
-                ["Normal BOM","Alternate BOM","New Development"]
-            )
+            # CHANGED FIELD
+            bom_type = st.text_input("BOM Type")
 
             additional = st.text_area("Additional Comments")
 
@@ -302,10 +306,8 @@ else:
             with st.form("advance"):
 
                 vendor = st.text_input("Vendor")
-                payment_type = st.selectbox(
-                    "Payment Type",
-                    ["Advance","Final","Part Payment"]
-                )
+
+                payment_type = st.text_input("Payment Type")
 
                 po = st.text_input("PO Number")
                 amount = st.number_input("Amount")
