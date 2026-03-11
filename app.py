@@ -7,252 +7,329 @@ import io
 from reportlab.platypus import SimpleDocTemplate, Table
 from reportlab.lib.pagesizes import A4
 
-st.set_page_config(page_title="Procurement Portal",layout="wide")
+st.set_page_config(page_title="Factory Procurement Portal", layout="wide")
 
-EMAIL_ADDRESS="jampina.balanaresh@gmail.com"
-EMAIL_PASSWORD="YOUR_APP_PASSWORD"
+# ---------------- EMAIL SETTINGS ---------------- #
 
-EMAILS={
-"BOMTEAM":"jampina.balanaresh@gmail.com",
-"HOD":"balanareshbalu@gmail.com",
-"GM_OFFICE":"purchase@resoluteelectronics.com"
+EMAIL_ADDRESS = "jampina.balanaresh@gmail.com"
+EMAIL_PASSWORD = "YOUR_APP_PASSWORD"
+
+EMAILS = {
+    "BOMTEAM": "jampina.balanaresh@gmail.com",
+    "HOD": "balanareshbalu@gmail.com",
+    "GM_OFFICE": "purchase@resoluteelectronics.com"
 }
 
-def send_email(to_email,subject,message):
-
+def send_email(to_email, subject, message):
     try:
-        msg=MIMEText(message)
-        msg["Subject"]=subject
-        msg["From"]=EMAIL_ADDRESS
-        msg["To"]=to_email
+        msg = MIMEText(message)
+        msg["Subject"] = subject
+        msg["From"] = EMAIL_ADDRESS
+        msg["To"] = to_email
 
-        server=smtplib.SMTP("smtp.gmail.com",587)
+        server = smtplib.SMTP("smtp.gmail.com", 587)
         server.starttls()
-        server.login(EMAIL_ADDRESS,EMAIL_PASSWORD)
+        server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
         server.send_message(msg)
         server.quit()
     except:
         pass
 
+
+# ---------------- PDF GENERATOR ---------------- #
+
 def generate_pdf(row):
 
-    buffer=io.BytesIO()
+    buffer = io.BytesIO()
 
-    data=[
-    ["Vendor",row["Vendor"]],
-    ["Part",row["Part"]],
-    ["Price",row["Price"]],
-    ["QPS",row["QPS"]],
-    ["BOM",row["BOM"]],
-    ["HOD Comments",row["HOD_COMMENTS"]],
-    ["GM Comments",row["GM_COMMENTS"]],
-    ["Status",row["STATUS"]]
+    data = [
+        ["Vendor", row["Vendor"]],
+        ["Part Number", row["Part"]],
+        ["Description", row["Description"]],
+        ["Price", row["Price"]],
+        ["QPS", row["QPS"]],
+        ["BOM Type", row["BOM"]],
+        ["Additional Comments", row["Additional"]],
+        ["HOD Comments", row["HOD_COMMENTS"]],
+        ["GM Comments", row["GM_COMMENTS"]],
+        ["Status", row["STATUS"]]
     ]
 
-    pdf=SimpleDocTemplate(buffer,pagesize=A4)
-    table=Table(data)
+    pdf = SimpleDocTemplate(buffer, pagesize=A4)
+    table = Table(data)
     pdf.build([table])
     buffer.seek(0)
 
     return buffer
 
-if "master_data" not in st.session_state:
-    st.session_state.master_data=[]
+
+# ---------------- SESSION STORAGE ---------------- #
+
+if "bom_data" not in st.session_state:
+    st.session_state.bom_data = []
 
 if "mis_data" not in st.session_state:
-    st.session_state.mis_data=[]
+    st.session_state.mis_data = []
 
-if "advance_payments" not in st.session_state:
-    st.session_state.advance_payments=[]
+if "advance_data" not in st.session_state:
+    st.session_state.advance_data = []
+
+if "daily_data" not in st.session_state:
+    st.session_state.daily_data = []
 
 if "auth" not in st.session_state:
-    st.session_state.auth=False
+    st.session_state.auth = False
+
+
+# ---------------- LOGIN PAGE ---------------- #
 
 if not st.session_state.auth:
 
-    col1,col2=st.columns([1,2])
+    col1, col2 = st.columns([1,2])
 
     with col1:
+        st.title("LOGIN")
 
-        st.title("Login")
-
-        uid=st.text_input("Username").upper()
-        pwd=st.text_input("Password",type="password")
+        uid = st.text_input("Username").upper()
+        pwd = st.text_input("Password", type="password")
 
         if st.button("Login"):
 
-            users={
-            "BOMTEAM":"BOM123",
-            "NONBOMTEAM":"NON123",
-            "HOD":"HOD123",
-            "GM_OFFICE":"GM123"
+            users = {
+                "BOMTEAM":"BOM123",
+                "NONBOMTEAM":"NON123",
+                "HOD":"HOD123",
+                "GM_OFFICE":"GM123"
             }
 
             if uid in users and users[uid]==pwd:
-
                 st.session_state.auth=True
                 st.session_state.role=uid
                 st.rerun()
 
     with col2:
-
         st.image("https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d",use_container_width=True)
+
+# ---------------- MAIN SYSTEM ---------------- #
 
 else:
 
-    role=st.session_state.role
+    role = st.session_state.role
+    st.sidebar.write("Logged in:", role)
 
-    st.sidebar.write(role)
+# ---------------- BOM TEAM ---------------- #
 
-    if role=="BOMTEAM":
+    if role == "BOMTEAM":
 
-        st.header("Create BOM Request")
+        st.header("BOM Request Form")
 
-        with st.form("bom"):
+        with st.form("bom_form"):
 
-            vendor=st.text_input("Vendor")
-            part=st.text_input("Part Number")
-            desc=st.text_input("Description")
-            price=st.number_input("Price")
-            qps=st.text_input("QPS")
-            bom=st.selectbox("BOM Type",["Normal","Alternate","New"])
-            add=st.text_area("Additional Comments")
+            vendor = st.text_input("Vendor")
+            part = st.text_input("Part Number")
+            desc = st.text_input("Description")
+            price = st.number_input("Price")
+
+            qps = st.text_input("QPS")
+
+            bom_type = st.selectbox("BOM Type",
+                ["Normal BOM","Alternate BOM","New Development"])
+
+            additional = st.text_area("Additional Comments")
 
             if st.form_submit_button("Submit"):
 
-                st.session_state.master_data.append({
+                st.session_state.bom_data.append({
 
-                "Vendor":vendor,
-                "Part":part,
-                "Description":desc,
-                "Price":price,
-                "QPS":qps,
-                "BOM":bom,
-                "Additional":add,
+                    "Vendor":vendor,
+                    "Part":part,
+                    "Description":desc,
+                    "Price":price,
+                    "QPS":qps,
+                    "BOM":bom_type,
+                    "Additional":additional,
 
-                "HOD_COMMENTS":"",
-                "GM_COMMENTS":"",
+                    "HOD_COMMENTS":"",
+                    "GM_COMMENTS":"",
 
-                "CREATED":datetime.now(),
-                "HOD_TIME":"",
-                "GM_TIME":"",
+                    "CREATED_TIME":datetime.now(),
+                    "HOD_TIME":"",
+                    "GM_TIME":"",
 
-                "STATUS":"PENDING HOD"
-
+                    "STATUS":"PENDING HOD"
                 })
 
-                send_email(EMAILS["HOD"],"New BOM Request",vendor)
+                send_email(EMAILS["HOD"],
+                           "New BOM Request",
+                           f"{vendor} request waiting approval")
 
-        if st.session_state.master_data:
-
-            df=pd.DataFrame(st.session_state.master_data)
+        if st.session_state.bom_data:
+            df = pd.DataFrame(st.session_state.bom_data)
             st.dataframe(df)
 
-    if role=="HOD":
+# ---------------- HOD APPROVAL ---------------- #
 
-        for i,row in enumerate(st.session_state.master_data):
+    if role == "HOD":
+
+        for i,row in enumerate(st.session_state.bom_data):
 
             if row["STATUS"]=="PENDING HOD":
 
                 st.write(row["Vendor"],row["Part"])
 
-                comment=st.text_input("HOD Comment",key=i)
+                comment = st.text_input("HOD Comment",key=i)
 
-                if st.button("Approve",key="a"+str(i)):
+                if st.button("Approve",key=f"a{i}"):
 
-                    st.session_state.master_data[i]["HOD_COMMENTS"]=comment
-                    st.session_state.master_data[i]["HOD_TIME"]=datetime.now()
-                    st.session_state.master_data[i]["STATUS"]="PENDING GM"
+                    st.session_state.bom_data[i]["HOD_COMMENTS"]=comment
+                    st.session_state.bom_data[i]["HOD_TIME"]=datetime.now()
+                    st.session_state.bom_data[i]["STATUS"]="PENDING GM"
 
-                    send_email(EMAILS["GM_OFFICE"],"Waiting GM Approval",row["Vendor"])
+                    send_email(EMAILS["GM_OFFICE"],
+                               "Waiting GM Approval",
+                               row["Vendor"])
 
-                if st.button("Reject",key="r"+str(i)):
+                if st.button("Reject",key=f"r{i}"):
 
-                    st.session_state.master_data[i]["STATUS"]="REJECTED"
+                    st.session_state.bom_data[i]["STATUS"]="REJECTED"
 
-                    send_email(EMAILS["BOMTEAM"],"Request Rejected",row["Vendor"])
+                    send_email(EMAILS["BOMTEAM"],
+                               "Request Rejected",
+                               row["Vendor"])
 
-    if role=="GM_OFFICE":
+# ---------------- GM APPROVAL ---------------- #
 
-        for i,row in enumerate(st.session_state.master_data):
+    if role == "GM_OFFICE":
+
+        st.header("GM Dashboard")
+
+        for i,row in enumerate(st.session_state.bom_data):
 
             if row["STATUS"]=="PENDING GM":
 
                 st.write(row["Vendor"],row["Part"])
 
-                comment=st.text_input("GM Comment",key="g"+str(i))
+                comment = st.text_input("GM Comment",key=f"g{i}")
 
-                if st.button("Approve",key="ga"+str(i)):
+                if st.button("Approve",key=f"ga{i}"):
 
-                    st.session_state.master_data[i]["GM_COMMENTS"]=comment
-                    st.session_state.master_data[i]["GM_TIME"]=datetime.now()
-                    st.session_state.master_data[i]["STATUS"]="APPROVED"
+                    st.session_state.bom_data[i]["GM_COMMENTS"]=comment
+                    st.session_state.bom_data[i]["GM_TIME"]=datetime.now()
+                    st.session_state.bom_data[i]["STATUS"]="APPROVED"
 
-                    send_email(EMAILS["BOMTEAM"],"Request Approved",row["Vendor"])
+                    send_email(EMAILS["BOMTEAM"],
+                               "Request Approved",
+                               row["Vendor"])
 
-        st.header("GM Dashboard")
+        approved = [r for r in st.session_state.bom_data if r["STATUS"]=="APPROVED"]
 
-        if st.session_state.mis_data:
+        if approved:
 
-            df=pd.DataFrame(st.session_state.mis_data)
+            st.subheader("Approved Requests")
 
-            st.bar_chart(df.groupby("Supplier")["Amount"].sum())
+            df = pd.DataFrame(approved)
 
-    if role=="NONBOMTEAM":
+            st.dataframe(df)
 
-        tab1,tab2=st.tabs(["Advance Payment","MIS"])
+            for r in approved:
+
+                pdf = generate_pdf(r)
+
+                st.download_button(
+                    "Download Approval PDF",
+                    data=pdf,
+                    file_name=f"BOM_APPROVAL_{r['Vendor']}.pdf"
+                )
+
+# ---------------- NON BOM TEAM ---------------- #
+
+    if role == "NONBOMTEAM":
+
+        tab1,tab2,tab3 = st.tabs(["Daily Tracker","Advance Payment","MIS Tracker"])
+
+# DAILY TRACKER
 
         with tab1:
 
-            with st.form("adv"):
+            with st.form("daily"):
 
-                vendor=st.text_input("Vendor")
-                type=st.selectbox("Type",["Advance","Final","Part"])
-                po=st.text_input("PO")
-                amount=st.number_input("Amount")
+                plant = st.text_input("Plant")
+                pr = st.number_input("PR Received")
+                po = st.number_input("PO Created")
 
-                if st.form_submit_button("Add"):
+                if st.form_submit_button("Submit"):
 
-                    st.session_state.advance_payments.append({
+                    st.session_state.daily_data.append({
 
-                    "Vendor":vendor,
-                    "Type":type,
-                    "PO":po,
-                    "Amount":amount
-
+                        "Plant":plant,
+                        "PR":pr,
+                        "PO":po,
+                        "Balance":pr-po
                     })
 
-            if st.session_state.advance_payments:
+            if st.session_state.daily_data:
+                st.dataframe(pd.DataFrame(st.session_state.daily_data))
 
-                st.dataframe(pd.DataFrame(st.session_state.advance_payments))
+# ADVANCE PAYMENT
 
         with tab2:
 
+            with st.form("advance"):
+
+                vendor = st.text_input("Vendor")
+                type = st.selectbox("Type",
+                    ["Advance","Final","Part Payment"])
+
+                po = st.text_input("PO Number")
+                amount = st.number_input("Amount")
+
+                if st.form_submit_button("Submit"):
+
+                    st.session_state.advance_data.append({
+
+                        "Vendor":vendor,
+                        "Type":type,
+                        "PO":po,
+                        "Amount":amount
+                    })
+
+            if st.session_state.advance_data:
+
+                df = pd.DataFrame(st.session_state.advance_data)
+                st.dataframe(df)
+
+# MIS TRACKER
+
+        with tab3:
+
             with st.form("mis"):
 
-                sup=st.text_input("Supplier")
-                po=st.text_input("PO")
-                qty=st.number_input("Qty")
-                rec=st.number_input("Received")
-                amt=st.number_input("Amount")
+                supplier = st.text_input("Supplier")
+                po = st.text_input("PO No")
+                qty = st.number_input("Qty")
+                received = st.number_input("Received Qty")
+                amount = st.number_input("Amount")
 
                 if st.form_submit_button("Submit"):
 
                     st.session_state.mis_data.append({
 
-                    "Supplier":sup,
-                    "PO":po,
-                    "Qty":qty,
-                    "Received":rec,
-                    "Pending":qty-rec,
-                    "Amount":amt
-
+                        "Supplier":supplier,
+                        "PO":po,
+                        "Qty":qty,
+                        "Received":received,
+                        "Pending":qty-received,
+                        "Amount":amount
                     })
 
             if st.session_state.mis_data:
 
-                df=pd.DataFrame(st.session_state.mis_data)
+                df = pd.DataFrame(st.session_state.mis_data)
 
                 st.dataframe(df)
 
-                st.bar_chart(df.groupby("Supplier")["Amount"].sum())
+                st.subheader("Vendor Spend Chart")
+
+                chart = df.groupby("Supplier")["Amount"].sum()
+
+                st.bar_chart(chart)
