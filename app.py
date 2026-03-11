@@ -99,7 +99,7 @@ else:
         menu = st.sidebar.radio("Navigation",[
             "PENDING APPROVALS",
             "NON-BOM REVIEW",
-            "GM DASHBOARD",
+            " DASHBOARD",
             "AUDIT LOGS"
         ])
     else:
