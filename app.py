@@ -136,6 +136,7 @@ else:
                     "Vendor":vendor,
                     "Part":part,
                     "Description":desc,
+                    "Bom":Bom,
                     "Price":price,
                     "QPS":qps,
                     "HOD_SIGN":"",
@@ -158,7 +159,7 @@ else:
 
     elif menu == "PENDING APPROVALS":
 
-        st.header("Approval Queue")
+        st.header("Approval Requested list")
 
         for i,row in enumerate(st.session_state.master_data):
 
@@ -322,7 +323,7 @@ else:
                 )
 
 # ---------------------------------------------------------
-# GM PROFESSIONAL DASHBOARD
+# HOD PROFESSIONAL DASHBOARD
 # ---------------------------------------------------------
 
     elif menu == "GM DASHBOARD":
