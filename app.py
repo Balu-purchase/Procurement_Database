@@ -3,24 +3,23 @@ import pandas as pd
 from datetime import datetime
 import smtplib
 from email.mime.text import MIMEText
-import io
 
 st.set_page_config(page_title="Resolute Procurement Portal", layout="wide")
 
 # ---------------- COMPANY HEADER ---------------- #
 
+LOGO_URL = "https://upload.wikimedia.org/wikipedia/commons/3/3a/Logo_placeholder.png"
+
 col1, col2, col3 = st.columns([1,4,1])
 
 with col1:
-    st.image("logo.png", width=110)
+    st.image(LOGO_URL, width=110)
 
 with col2:
     st.markdown(
-    "<h1 style='text-align:center;color:#0B5ED7;'>Resolute Electronics Procurement Portal</h1>",
-    unsafe_allow_html=True)
-
-with col3:
-    st.write("")
+        "<h1 style='text-align:center;color:#0B5ED7;'>Resolute Electronics Procurement Portal</h1>",
+        unsafe_allow_html=True
+    )
 
 st.markdown("---")
 
@@ -131,8 +130,8 @@ if not st.session_state.auth:
     with col2:
 
         st.image(
-        "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d",
-        use_container_width=True
+            "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d",
+            use_container_width=True
         )
 
 
@@ -142,7 +141,7 @@ else:
 
     role = st.session_state.role
 
-    st.sidebar.image("logo.png", width=120)
+    st.sidebar.image(LOGO_URL, width=120)
     st.sidebar.write("Logged in as:", role)
 
 # ---------------- BOM TEAM MODULE ---------------- #
@@ -181,11 +180,6 @@ else:
 
                     "HOD_COMMENTS":"",
                     "GM_COMMENTS":"",
-
-                    "CREATED_TIME":datetime.now(),
-                    "HOD_TIME":"",
-                    "GM_TIME":"",
-
                     "STATUS":"PENDING HOD"
                 })
 
@@ -220,24 +214,11 @@ else:
                 if st.button("Approve", key=f"a{i}"):
 
                     st.session_state.bom_data[i]["HOD_COMMENTS"]=comment
-                    st.session_state.bom_data[i]["HOD_TIME"]=datetime.now()
                     st.session_state.bom_data[i]["STATUS"]="PENDING GM"
-
-                    send_email(
-                        EMAILS["GM_OFFICE"],
-                        "BOM Request Waiting GM Approval",
-                        row["Vendor"]
-                    )
 
                 if st.button("Reject", key=f"r{i}"):
 
                     st.session_state.bom_data[i]["STATUS"]="REJECTED"
-
-                    send_email(
-                        EMAILS["BOMTEAM"],
-                        "BOM Request Rejected",
-                        row["Vendor"]
-                    )
 
 
 # ---------------- GM DASHBOARD ---------------- #
@@ -257,14 +238,7 @@ else:
                 if st.button("Approve", key=f"ga{i}"):
 
                     st.session_state.bom_data[i]["GM_COMMENTS"]=comment
-                    st.session_state.bom_data[i]["GM_TIME"]=datetime.now()
                     st.session_state.bom_data[i]["STATUS"]="APPROVED"
-
-                    send_email(
-                        EMAILS["BOMTEAM"],
-                        "BOM Request Approved",
-                        row["Vendor"]
-                    )
 
         approved = [
             r for r in st.session_state.bom_data
@@ -297,8 +271,6 @@ else:
             ["Daily Tracker","Advance Payment","MIS Tracker"]
         )
 
-# DAILY TRACKER
-
         with tab1:
 
             st.subheader("Daily Purchase Tracker")
@@ -320,13 +292,8 @@ else:
                     })
 
             if st.session_state.daily_data:
+                st.dataframe(pd.DataFrame(st.session_state.daily_data))
 
-                st.dataframe(
-                    pd.DataFrame(st.session_state.daily_data)
-                )
-
-
-# ADVANCE PAYMENT
 
         with tab2:
 
@@ -335,7 +302,7 @@ else:
             with st.form("advance"):
 
                 vendor = st.text_input("Vendor")
-                type = st.selectbox(
+                payment_type = st.selectbox(
                     "Payment Type",
                     ["Advance","Final","Part Payment"]
                 )
@@ -348,19 +315,14 @@ else:
                     st.session_state.advance_data.append({
 
                         "Vendor":vendor,
-                        "Type":type,
+                        "Type":payment_type,
                         "PO":po,
                         "Amount":amount
                     })
 
             if st.session_state.advance_data:
+                st.dataframe(pd.DataFrame(st.session_state.advance_data))
 
-                st.dataframe(
-                    pd.DataFrame(st.session_state.advance_data)
-                )
-
-
-# MIS TRACKER
 
         with tab3:
 
