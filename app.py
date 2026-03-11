@@ -5,7 +5,24 @@ import smtplib
 from email.mime.text import MIMEText
 import io
 
-st.set_page_config(page_title="Factory Procurement Portal", layout="wide")
+st.set_page_config(page_title="Resolute Procurement Portal", layout="wide")
+
+# ---------------- COMPANY HEADER ---------------- #
+
+col1, col2, col3 = st.columns([1,4,1])
+
+with col1:
+    st.image("logo.png", width=110)
+
+with col2:
+    st.markdown(
+    "<h1 style='text-align:center;color:#0B5ED7;'>Resolute Electronics Procurement Portal</h1>",
+    unsafe_allow_html=True)
+
+with col3:
+    st.write("")
+
+st.markdown("---")
 
 # ---------------- EMAIL SETTINGS ---------------- #
 
@@ -19,6 +36,7 @@ EMAILS = {
 }
 
 def send_email(to_email, subject, message):
+
     try:
         msg = MIMEText(message)
         msg["Subject"] = subject
@@ -30,6 +48,7 @@ def send_email(to_email, subject, message):
         server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
         server.send_message(msg)
         server.quit()
+
     except:
         pass
 
@@ -39,7 +58,7 @@ def send_email(to_email, subject, message):
 def generate_approval_file(row):
 
     text = f"""
-FACTORY PROCUREMENT APPROVAL
+RESOLUTE ELECTRONICS PROCUREMENT APPROVAL
 
 Vendor : {row['Vendor']}
 Part Number : {row['Part']}
@@ -89,7 +108,7 @@ if not st.session_state.auth:
 
     with col1:
 
-        st.title("LOGIN")
+        st.subheader("User Login")
 
         uid = st.text_input("Username").upper()
         pwd = st.text_input("Password", type="password")
@@ -110,9 +129,11 @@ if not st.session_state.auth:
                 st.rerun()
 
     with col2:
+
         st.image(
         "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d",
-        use_container_width=True)
+        use_container_width=True
+        )
 
 
 # ---------------- MAIN SYSTEM ---------------- #
@@ -120,10 +141,11 @@ if not st.session_state.auth:
 else:
 
     role = st.session_state.role
-    st.sidebar.write("Logged in:", role)
 
+    st.sidebar.image("logo.png", width=120)
+    st.sidebar.write("Logged in as:", role)
 
-# ---------------- BOM TEAM ---------------- #
+# ---------------- BOM TEAM MODULE ---------------- #
 
     if role == "BOMTEAM":
 
@@ -138,12 +160,14 @@ else:
 
             qps = st.text_input("QPS")
 
-            bom_type = st.selectbox("BOM Type",
-                ["Normal BOM","Alternate BOM","New Development"])
+            bom_type = st.selectbox(
+                "BOM Type",
+                ["Normal BOM","Alternate BOM","New Development"]
+            )
 
             additional = st.text_area("Additional Comments")
 
-            if st.form_submit_button("Submit"):
+            if st.form_submit_button("Submit Request"):
 
                 st.session_state.bom_data.append({
 
@@ -167,11 +191,13 @@ else:
 
                 send_email(
                     EMAILS["HOD"],
-                    "New BOM Request",
-                    f"{vendor} request waiting approval"
+                    "New BOM Request Waiting Approval",
+                    vendor
                 )
 
         if st.session_state.bom_data:
+
+            st.subheader("Submitted Requests")
 
             df = pd.DataFrame(st.session_state.bom_data)
             st.dataframe(df)
@@ -181,15 +207,17 @@ else:
 
     if role == "HOD":
 
+        st.header("HOD Approval Panel")
+
         for i,row in enumerate(st.session_state.bom_data):
 
             if row["STATUS"]=="PENDING HOD":
 
-                st.write(row["Vendor"],row["Part"])
+                st.write(row["Vendor"], row["Part"])
 
-                comment = st.text_input("HOD Comment",key=i)
+                comment = st.text_input("HOD Comment", key=i)
 
-                if st.button("Approve",key=f"a{i}"):
+                if st.button("Approve", key=f"a{i}"):
 
                     st.session_state.bom_data[i]["HOD_COMMENTS"]=comment
                     st.session_state.bom_data[i]["HOD_TIME"]=datetime.now()
@@ -197,36 +225,36 @@ else:
 
                     send_email(
                         EMAILS["GM_OFFICE"],
-                        "Waiting GM Approval",
+                        "BOM Request Waiting GM Approval",
                         row["Vendor"]
                     )
 
-                if st.button("Reject",key=f"r{i}"):
+                if st.button("Reject", key=f"r{i}"):
 
                     st.session_state.bom_data[i]["STATUS"]="REJECTED"
 
                     send_email(
                         EMAILS["BOMTEAM"],
-                        "Request Rejected",
+                        "BOM Request Rejected",
                         row["Vendor"]
                     )
 
 
-# ---------------- GM APPROVAL ---------------- #
+# ---------------- GM DASHBOARD ---------------- #
 
     if role == "GM_OFFICE":
 
-        st.header("GM Dashboard")
+        st.header("GM Approval Dashboard")
 
         for i,row in enumerate(st.session_state.bom_data):
 
             if row["STATUS"]=="PENDING GM":
 
-                st.write(row["Vendor"],row["Part"])
+                st.write(row["Vendor"], row["Part"])
 
-                comment = st.text_input("GM Comment",key=f"g{i}")
+                comment = st.text_input("GM Comment", key=f"g{i}")
 
-                if st.button("Approve",key=f"ga{i}"):
+                if st.button("Approve", key=f"ga{i}"):
 
                     st.session_state.bom_data[i]["GM_COMMENTS"]=comment
                     st.session_state.bom_data[i]["GM_TIME"]=datetime.now()
@@ -234,15 +262,18 @@ else:
 
                     send_email(
                         EMAILS["BOMTEAM"],
-                        "Request Approved",
+                        "BOM Request Approved",
                         row["Vendor"]
                     )
 
-        approved = [r for r in st.session_state.bom_data if r["STATUS"]=="APPROVED"]
+        approved = [
+            r for r in st.session_state.bom_data
+            if r["STATUS"]=="APPROVED"
+        ]
 
         if approved:
 
-            st.subheader("Approved Requests")
+            st.subheader("Approved BOM Requests")
 
             df = pd.DataFrame(approved)
             st.dataframe(df)
@@ -258,7 +289,7 @@ else:
                 )
 
 
-# ---------------- NON BOM TEAM ---------------- #
+# ---------------- NON BOM MODULE ---------------- #
 
     if role == "NONBOMTEAM":
 
@@ -266,10 +297,11 @@ else:
             ["Daily Tracker","Advance Payment","MIS Tracker"]
         )
 
-
 # DAILY TRACKER
 
         with tab1:
+
+            st.subheader("Daily Purchase Tracker")
 
             with st.form("daily"):
 
@@ -288,18 +320,23 @@ else:
                     })
 
             if st.session_state.daily_data:
-                st.dataframe(pd.DataFrame(st.session_state.daily_data))
+
+                st.dataframe(
+                    pd.DataFrame(st.session_state.daily_data)
+                )
 
 
 # ADVANCE PAYMENT
 
         with tab2:
 
+            st.subheader("Advance Payment Request")
+
             with st.form("advance"):
 
                 vendor = st.text_input("Vendor")
                 type = st.selectbox(
-                    "Type",
+                    "Payment Type",
                     ["Advance","Final","Part Payment"]
                 )
 
@@ -318,13 +355,16 @@ else:
 
             if st.session_state.advance_data:
 
-                df = pd.DataFrame(st.session_state.advance_data)
-                st.dataframe(df)
+                st.dataframe(
+                    pd.DataFrame(st.session_state.advance_data)
+                )
 
 
 # MIS TRACKER
 
         with tab3:
+
+            st.subheader("Monthly MIS Tracker")
 
             with st.form("mis"):
 
@@ -352,7 +392,7 @@ else:
 
                 st.dataframe(df)
 
-                st.subheader("Vendor Spend Chart")
+                st.subheader("Vendor Spend Analytics")
 
                 chart = df.groupby("Supplier")["Amount"].sum()
 
