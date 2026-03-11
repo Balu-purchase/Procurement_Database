@@ -4,8 +4,6 @@ from datetime import datetime
 import smtplib
 from email.mime.text import MIMEText
 import io
-from reportlab.platypus import SimpleDocTemplate, Table
-from reportlab.lib.pagesizes import A4
 
 st.set_page_config(page_title="Factory Procurement Portal", layout="wide")
 
@@ -36,31 +34,33 @@ def send_email(to_email, subject, message):
         pass
 
 
-# ---------------- PDF GENERATOR ---------------- #
+# ---------------- APPROVAL FILE GENERATOR ---------------- #
 
-def generate_pdf(row):
+def generate_approval_file(row):
 
-    buffer = io.BytesIO()
+    text = f"""
+FACTORY PROCUREMENT APPROVAL
 
-    data = [
-        ["Vendor", row["Vendor"]],
-        ["Part Number", row["Part"]],
-        ["Description", row["Description"]],
-        ["Price", row["Price"]],
-        ["QPS", row["QPS"]],
-        ["BOM Type", row["BOM"]],
-        ["Additional Comments", row["Additional"]],
-        ["HOD Comments", row["HOD_COMMENTS"]],
-        ["GM Comments", row["GM_COMMENTS"]],
-        ["Status", row["STATUS"]]
-    ]
+Vendor : {row['Vendor']}
+Part Number : {row['Part']}
+Description : {row['Description']}
+Price : {row['Price']}
+QPS : {row['QPS']}
+BOM Type : {row['BOM']}
 
-    pdf = SimpleDocTemplate(buffer, pagesize=A4)
-    table = Table(data)
-    pdf.build([table])
-    buffer.seek(0)
+Additional Comments :
+{row['Additional']}
 
-    return buffer
+HOD Comments :
+{row['HOD_COMMENTS']}
+
+GM Comments :
+{row['GM_COMMENTS']}
+
+Status : {row['STATUS']}
+"""
+
+    return text
 
 
 # ---------------- SESSION STORAGE ---------------- #
@@ -88,6 +88,7 @@ if not st.session_state.auth:
     col1, col2 = st.columns([1,2])
 
     with col1:
+
         st.title("LOGIN")
 
         uid = st.text_input("Username").upper()
@@ -103,12 +104,16 @@ if not st.session_state.auth:
             }
 
             if uid in users and users[uid]==pwd:
+
                 st.session_state.auth=True
                 st.session_state.role=uid
                 st.rerun()
 
     with col2:
-        st.image("https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d",use_container_width=True)
+        st.image(
+        "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d",
+        use_container_width=True)
+
 
 # ---------------- MAIN SYSTEM ---------------- #
 
@@ -116,6 +121,7 @@ else:
 
     role = st.session_state.role
     st.sidebar.write("Logged in:", role)
+
 
 # ---------------- BOM TEAM ---------------- #
 
@@ -159,13 +165,17 @@ else:
                     "STATUS":"PENDING HOD"
                 })
 
-                send_email(EMAILS["HOD"],
-                           "New BOM Request",
-                           f"{vendor} request waiting approval")
+                send_email(
+                    EMAILS["HOD"],
+                    "New BOM Request",
+                    f"{vendor} request waiting approval"
+                )
 
         if st.session_state.bom_data:
+
             df = pd.DataFrame(st.session_state.bom_data)
             st.dataframe(df)
+
 
 # ---------------- HOD APPROVAL ---------------- #
 
@@ -185,17 +195,22 @@ else:
                     st.session_state.bom_data[i]["HOD_TIME"]=datetime.now()
                     st.session_state.bom_data[i]["STATUS"]="PENDING GM"
 
-                    send_email(EMAILS["GM_OFFICE"],
-                               "Waiting GM Approval",
-                               row["Vendor"])
+                    send_email(
+                        EMAILS["GM_OFFICE"],
+                        "Waiting GM Approval",
+                        row["Vendor"]
+                    )
 
                 if st.button("Reject",key=f"r{i}"):
 
                     st.session_state.bom_data[i]["STATUS"]="REJECTED"
 
-                    send_email(EMAILS["BOMTEAM"],
-                               "Request Rejected",
-                               row["Vendor"])
+                    send_email(
+                        EMAILS["BOMTEAM"],
+                        "Request Rejected",
+                        row["Vendor"]
+                    )
+
 
 # ---------------- GM APPROVAL ---------------- #
 
@@ -217,9 +232,11 @@ else:
                     st.session_state.bom_data[i]["GM_TIME"]=datetime.now()
                     st.session_state.bom_data[i]["STATUS"]="APPROVED"
 
-                    send_email(EMAILS["BOMTEAM"],
-                               "Request Approved",
-                               row["Vendor"])
+                    send_email(
+                        EMAILS["BOMTEAM"],
+                        "Request Approved",
+                        row["Vendor"]
+                    )
 
         approved = [r for r in st.session_state.bom_data if r["STATUS"]=="APPROVED"]
 
@@ -228,24 +245,27 @@ else:
             st.subheader("Approved Requests")
 
             df = pd.DataFrame(approved)
-
             st.dataframe(df)
 
             for r in approved:
 
-                pdf = generate_pdf(r)
+                file_data = generate_approval_file(r)
 
                 st.download_button(
-                    "Download Approval PDF",
-                    data=pdf,
-                    file_name=f"BOM_APPROVAL_{r['Vendor']}.pdf"
+                    "Download Approval File",
+                    file_data,
+                    file_name=f"BOM_APPROVAL_{r['Vendor']}.txt"
                 )
+
 
 # ---------------- NON BOM TEAM ---------------- #
 
     if role == "NONBOMTEAM":
 
-        tab1,tab2,tab3 = st.tabs(["Daily Tracker","Advance Payment","MIS Tracker"])
+        tab1,tab2,tab3 = st.tabs(
+            ["Daily Tracker","Advance Payment","MIS Tracker"]
+        )
+
 
 # DAILY TRACKER
 
@@ -270,6 +290,7 @@ else:
             if st.session_state.daily_data:
                 st.dataframe(pd.DataFrame(st.session_state.daily_data))
 
+
 # ADVANCE PAYMENT
 
         with tab2:
@@ -277,8 +298,10 @@ else:
             with st.form("advance"):
 
                 vendor = st.text_input("Vendor")
-                type = st.selectbox("Type",
-                    ["Advance","Final","Part Payment"])
+                type = st.selectbox(
+                    "Type",
+                    ["Advance","Final","Part Payment"]
+                )
 
                 po = st.text_input("PO Number")
                 amount = st.number_input("Amount")
@@ -297,6 +320,7 @@ else:
 
                 df = pd.DataFrame(st.session_state.advance_data)
                 st.dataframe(df)
+
 
 # MIS TRACKER
 
