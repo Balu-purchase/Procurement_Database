@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 
 # 1. Setup
-st.set_page_config(page_title="Resolute Admin", layout="wide")
+st.set_page_config(page_title="Resolute Admin Portal", layout="wide")
 
 # 2. Data Storage
 if "bom_data" not in st.session_state:
@@ -12,15 +12,23 @@ if "audit_logs" not in st.session_state:
     st.session_state.audit_logs = []
 if "daily_data" not in st.session_state:
     st.session_state.daily_data = []
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
 
-# 3. Sidebar Navigation & Logout
-st.sidebar.title("Resolute Admin")
-menu = st.sidebar.radio("Menu", ["Dashboard", "BOM", "Non-BOM", "Logs"])
-
-st.sidebar.markdown("---")
-if st.sidebar.button("Logout / Reset Session"):
-    st.session_state.clear()
-    st.rerun()
+# 3. Login Page Logic
+if not st.session_state.authenticated:
+    st.title("🔐 Resolute Admin Login")
+    user = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+    
+    if st.button("Login"):
+        # You can change these credentials as needed
+        if user == "ADMIN" and password == "RESOLUTE123":
+            st.session_state.authenticated = True
+            st.rerun()
+        else:
+            st.error("Invalid Username or Password")
+    st.stop() # Stops the rest of the app from running until logged in
 
 # 4. Global Audit Function
 def log_act(action):
@@ -29,7 +37,19 @@ def log_act(action):
         "Action": action
     })
 
-# 5. Dashboard Module
+# 5. Sidebar Navigation & Logout
+st.sidebar.title("Resolute Admin")
+menu = st.sidebar.radio("Menu", ["Dashboard", "BOM", "Non-BOM", "Logs"])
+
+st.sidebar.markdown("---")
+# This button clears auth and sends you back to the login page
+if st.sidebar.button("🔴 Logout"):
+    st.session_state.authenticated = False
+    # Optional: Clear data on logout? If not, remove the line below
+    # st.session_state.bom_data = [] 
+    st.rerun()
+
+# 6. Dashboard Module
 if menu == "Dashboard":
     st.header("Admin Dashboard")
     k1, k2, k3 = st.columns(3)
@@ -41,37 +61,9 @@ if menu == "Dashboard":
         df_b = pd.DataFrame(st.session_state.bom_data)
         st.line_chart(df_b['Price'])
 
-# 6. BOM Module
+# 7. BOM Module
 elif menu == "BOM":
     st.header("BOM Entry")
     with st.form("f1", clear_on_submit=True):
         v = st.text_input("Vendor")
-        p = st.text_input("Part")
-        pr = st.number_input("Price", min_value=0.0)
-        if st.form_submit_button("Submit"):
-            st.session_state.bom_data.append({"Vendor":v, "Part":p, "Price":pr})
-            log_act(f"Added BOM: {p}")
-            st.rerun()
-    if st.session_state.bom_data:
-        st.write(pd.DataFrame(st.session_state.bom_data))
-
-# 7. Non-BOM Module
-elif menu == "Non-BOM":
-    st.header("Non-BOM Tracker")
-    with st.form("f2"):
-        pl = st.text_input("Plant")
-        qty = st.number_input("Qty", step=1)
-        if st.form_submit_button("Save"):
-            st.session_state.daily_data.append({"Plant":pl, "Qty":qty})
-            log_act(f"Non-BOM: {pl}")
-            st.rerun()
-    if st.session_state.daily_data:
-        st.write(pd.DataFrame(st.session_state.daily_data))
-
-# 8. Audit Logs
-elif menu == "Logs":
-    st.header("System Logs")
-    if st.session_state.audit_logs:
-        st.write(pd.DataFrame(st.session_state.audit_logs)[::-1])
-    else:
-        st.info("No logs.")
+        p = st.text_input("Part
