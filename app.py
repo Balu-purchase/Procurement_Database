@@ -2,68 +2,57 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# 1. Setup
-st.set_page_config(page_title="Resolute Admin Portal", layout="wide")
+# 1. Config
+st.set_page_config(page_title="Resolute Admin", layout="wide")
 
-# 2. Data Storage
-if "bom_data" not in st.session_state:
-    st.session_state.bom_data = []
-if "audit_logs" not in st.session_state:
-    st.session_state.audit_logs = []
-if "daily_data" not in st.session_state:
-    st.session_state.daily_data = []
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
+# 2. State
+if "bom" not in st.session_state: st.session_state.bom = []
+if "log" not in st.session_state: st.session_state.log = []
+if "auth" not in st.session_state: st.session_state.auth = False
 
-# 3. Login Page Logic
-if not st.session_state.authenticated:
-    st.title("🔐 Resolute Admin Login")
-    user = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    
+# 3. Login
+if not st.session_state.auth:
+    st.title("Login")
+    u = st.text_input("User")
+    p = st.text_input("Pass", type="password")
     if st.button("Login"):
-        # You can change these credentials as needed
-        if user == "ADMIN" and password == "RESOLUTE123":
-            st.session_state.authenticated = True
+        if u == "ADMIN" and p == "RE123":
+            st.session_state.auth = True
             st.rerun()
-        else:
-            st.error("Invalid Username or Password")
-    st.stop() # Stops the rest of the app from running until logged in
+        else: st.error("Wrong")
+    st.stop()
 
-# 4. Global Audit Function
-def log_act(action):
-    st.session_state.audit_logs.append({
-        "Time": datetime.now().strftime("%H:%M:%S"),
-        "Action": action
-    })
-
-# 5. Sidebar Navigation & Logout
-st.sidebar.title("Resolute Admin")
-menu = st.sidebar.radio("Menu", ["Dashboard", "BOM", "Non-BOM", "Logs"])
-
-st.sidebar.markdown("---")
-# This button clears auth and sends you back to the login page
-if st.sidebar.button("🔴 Logout"):
-    st.session_state.authenticated = False
-    # Optional: Clear data on logout? If not, remove the line below
-    # st.session_state.bom_data = [] 
+# 4. Sidebar
+st.sidebar.title("Admin")
+m = st.sidebar.radio("Go to", ["Dash", "BOM", "Logs"])
+if st.sidebar.button("Logout"):
+    st.session_state.auth = False
     st.rerun()
 
-# 6. Dashboard Module
-if menu == "Dashboard":
-    st.header("Admin Dashboard")
-    k1, k2, k3 = st.columns(3)
-    k1.metric("BOM Count", len(st.session_state.bom_data))
-    k2.metric("Daily Logs", len(st.session_state.daily_data))
-    k3.metric("Audit Logs", len(st.session_state.audit_logs))
-    
-    if st.session_state.bom_data:
-        df_b = pd.DataFrame(st.session_state.bom_data)
-        st.line_chart(df_b['Price'])
+# 5. Dashboard
+if m == "Dash":
+    st.header("Dashboard")
+    st.metric("Total Items", len(st.session_state.bom))
+    if st.session_state.bom:
+        df = pd.DataFrame(st.session_state.bom)
+        st.line_chart(df['Price'])
 
-# 7. BOM Module
-elif menu == "BOM":
+# 6. BOM Entry
+elif m == "BOM":
     st.header("BOM Entry")
-    with st.form("f1", clear_on_submit=True):
-        v = st.text_input("Vendor")
-        p = st.text_input("Part
+    with st.form("f"):
+        vend = st.text_input("Vendor")
+        part = st.text_input("Part")
+        cost = st.number_input("Price", min_value=0.0)
+        if st.form_submit_button("Save"):
+            st.session_state.bom.append({"Vendor":vend,"Part":part,"Price":cost})
+            st.session_state.log.append(f"Added {part}")
+            st.success("Saved")
+            st.rerun()
+    if st.session_state.bom:
+        st.write(pd.DataFrame(st.session_state.bom))
+
+# 7. Logs
+elif m == "Logs":
+    st.header("Logs")
+    st.write(st.session_state.log)
