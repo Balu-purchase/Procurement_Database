@@ -3,9 +3,9 @@ import pandas as pd
 from datetime import datetime
 
 # --- PAGE CONFIG ---
-st.set_page_config(page_title="Resolute Admin Portal", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Resolute Admin Portal", layout="wide")
 
-# --- INITIALIZE DATABASE (Session State) ---
+# --- INITIALIZE SESSION STATE ---
 if "bom_data" not in st.session_state:
     st.session_state.bom_data = []
 if "audit_logs" not in st.session_state:
@@ -13,45 +13,38 @@ if "audit_logs" not in st.session_state:
 if "daily_data" not in st.session_state:
     st.session_state.daily_data = []
 
-# --- HELPER FUNCTIONS ---
+# --- AUDIT LOG FUNCTION ---
 def add_audit_log(action, details):
     log = {
         "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "User": "ADMIN_OVERRIDE",
+        "User": "ADMIN",
         "Action": action,
         "Details": details
     }
     st.session_state.audit_logs.append(log)
 
-# ---------------- SIDEBAR NAVIGATION ---------------- #
+# --- SIDEBAR ---
 with st.sidebar:
     st.title("Resolute Admin")
+    menu = st.radio("SELECT MODULE", ["Dashboard", "BOM Team", "Non-BOM Team", "Audit Logs"])
     st.markdown("---")
-    
-    menu = st.radio(
-        "SELECT MODULE",
-        ["📊 Dashboard", "💻 BOM Team", "📦 Non-BOM Team", "📜 Audit Logs"],
-        index=0
-    )
-    
-    st.markdown("---")
-    # Export Data Feature
-    if st.button("📥 Export Database to CSV"):
-        if st.session_state.bom_data:
-            df_export = pd.DataFrame(st.session_state.bom_data)
-            csv = df_export.to_csv(index=False).encode('utf-8')
-            st.download_button("Click to Download", csv, "procurement_data.csv", "text/csv")
-        else:
-            st.warning("No data to export.")
-
-    if st.button("🔴 System Logout"):
+    if st.button("Clear All Data"):
         st.session_state.clear()
         st.rerun()
 
-# ---------------- MODULE 1: DASHBOARD ---------------- #
-if menu == "📊 Dashboard":
-    st.header("Executive Procurement Dashboard")
+# --- DASHBOARD ---
+if menu == "Dashboard":
+    st.header("Executive Dashboard")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("BOM Requests", len(st.session_state.bom_data))
+    c2.metric("Daily Logs", len(st.session_state.daily_data))
+    c3.metric("Audit Actions", len(st.session_state.audit_logs))
     
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Total BOMs", len(st.session_state.bom_data))
-    col2.metric("Daily Logs", len(st.session_
+    if st.session_state.bom_data:
+        df = pd.DataFrame(st.session_state.bom_data)
+        st.subheader("Price Overview")
+        st.line_chart(df['Price'])
+
+# --- BOM TEAM ---
+elif menu == "BOM Team":
+    st.
