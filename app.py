@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# --- PAGE CONFIG ---
-st.set_page_config(page_title="Resolute Admin Portal", layout="wide")
+# 1. Setup
+st.set_page_config(page_title="Resolute Admin", layout="wide")
 
-# --- INITIALIZE SESSION STATE ---
+# 2. Data Storage
 if "bom_data" not in st.session_state:
     st.session_state.bom_data = []
 if "audit_logs" not in st.session_state:
@@ -13,38 +13,35 @@ if "audit_logs" not in st.session_state:
 if "daily_data" not in st.session_state:
     st.session_state.daily_data = []
 
-# --- AUDIT LOG FUNCTION ---
-def add_audit_log(action, details):
-    log = {
-        "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "User": "ADMIN",
-        "Action": action,
-        "Details": details
-    }
-    st.session_state.audit_logs.append(log)
+# 3. Sidebar Navigation
+st.sidebar.title("Resolute Admin")
+menu = st.sidebar.radio("Menu", ["Dashboard", "BOM", "Non-BOM", "Logs"])
 
-# --- SIDEBAR ---
-with st.sidebar:
-    st.title("Resolute Admin")
-    menu = st.radio("SELECT MODULE", ["Dashboard", "BOM Team", "Non-BOM Team", "Audit Logs"])
-    st.markdown("---")
-    if st.button("Clear All Data"):
-        st.session_state.clear()
-        st.rerun()
+# 4. Global Audit Function
+def log_act(action):
+    st.session_state.audit_logs.append({
+        "Time": datetime.now().strftime("%H:%M:%S"),
+        "Action": action
+    })
 
-# --- DASHBOARD ---
+# 5. Dashboard Module
 if menu == "Dashboard":
-    st.header("Executive Dashboard")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("BOM Requests", len(st.session_state.bom_data))
-    c2.metric("Daily Logs", len(st.session_state.daily_data))
-    c3.metric("Audit Actions", len(st.session_state.audit_logs))
+    st.header("Admin Dashboard")
+    k1, k2, k3 = st.columns(3)
+    k1.metric("BOM Count", len(st.session_state.bom_data))
+    k2.metric("Daily Logs", len(st.session_state.daily_data))
+    k3.metric("Audit Logs", len(st.session_state.audit_logs))
     
     if st.session_state.bom_data:
-        df = pd.DataFrame(st.session_state.bom_data)
-        st.subheader("Price Overview")
-        st.line_chart(df['Price'])
+        df_b = pd.DataFrame(st.session_state.bom_data)
+        st.line_chart(df_b['Price'])
 
-# --- BOM TEAM ---
-elif menu == "BOM Team":
-    st.
+# 6. BOM Module
+elif menu == "BOM":
+    st.header("BOM Entry")
+    with st.form("f1", clear_on_submit=True):
+        v = st.text_input("Vendor")
+        p = st.text_input("Part")
+        pr = st.number_input("Price", min_value=0.0)
+        if st.form_submit_button("Submit"):
+            st.session_state
