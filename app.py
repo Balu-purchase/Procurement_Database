@@ -13,9 +13,14 @@ if "audit_logs" not in st.session_state:
 if "daily_data" not in st.session_state:
     st.session_state.daily_data = []
 
-# 3. Sidebar Navigation
+# 3. Sidebar Navigation & Logout
 st.sidebar.title("Resolute Admin")
 menu = st.sidebar.radio("Menu", ["Dashboard", "BOM", "Non-BOM", "Logs"])
+
+st.sidebar.markdown("---")
+if st.sidebar.button("Logout / Reset Session"):
+    st.session_state.clear()
+    st.rerun()
 
 # 4. Global Audit Function
 def log_act(action):
@@ -44,4 +49,29 @@ elif menu == "BOM":
         p = st.text_input("Part")
         pr = st.number_input("Price", min_value=0.0)
         if st.form_submit_button("Submit"):
-            st.session_state
+            st.session_state.bom_data.append({"Vendor":v, "Part":p, "Price":pr})
+            log_act(f"Added BOM: {p}")
+            st.rerun()
+    if st.session_state.bom_data:
+        st.write(pd.DataFrame(st.session_state.bom_data))
+
+# 7. Non-BOM Module
+elif menu == "Non-BOM":
+    st.header("Non-BOM Tracker")
+    with st.form("f2"):
+        pl = st.text_input("Plant")
+        qty = st.number_input("Qty", step=1)
+        if st.form_submit_button("Save"):
+            st.session_state.daily_data.append({"Plant":pl, "Qty":qty})
+            log_act(f"Non-BOM: {pl}")
+            st.rerun()
+    if st.session_state.daily_data:
+        st.write(pd.DataFrame(st.session_state.daily_data))
+
+# 8. Audit Logs
+elif menu == "Logs":
+    st.header("System Logs")
+    if st.session_state.audit_logs:
+        st.write(pd.DataFrame(st.session_state.audit_logs)[::-1])
+    else:
+        st.info("No logs.")
