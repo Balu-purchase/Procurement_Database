@@ -2,9 +2,11 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import os
+import smtplib
+from email.mime.text import MIMEText
 
 # --- 1. CONFIGURATION ---
-st.set_page_config(page_title="Procurement System", layout="wide")
+st.set_page_config(page_title="Resolute Approval System", layout="wide")
 DB_FILE = "resolute_db.csv"
 
 USERS = {
@@ -14,19 +16,20 @@ USERS = {
     "GM": "GM123"
 }
 
-# --- ENHANCED COLOR LOGIC ---
-def apply_color_logic(val):
+# --- NEW: STYLING FUNCTION FOR DASHBOARD ---
+def style_status(val):
     val_upper = str(val).upper()
-    # FULL GREEN for Approved
     if "APPROVED SUCCESSFULLY" in val_upper or val_upper == "APPROVED":
         return 'background-color: green; color: white; font-weight: bold'
-    # LIGHT ORANGE for Pending
     elif "PENDING" in val_upper:
-        return 'background-color: #FFCC00; color: black; font-weight: bold'
-    # RED for Rejected
+        return 'background-color: #FFCC00; color: black; font-weight: bold' # Light Orange
     elif "REJECTED" in val_upper:
         return 'background-color: red; color: white; font-weight: bold'
     return ''
+
+# --- EMAIL FUNCTION ---
+def send_notification(subject, body, to_email="hod_email@example.com"):
+    st.info(f"📧 Notification Triggered: {subject}")
 
 # Database Initialization
 if not os.path.exists(DB_FILE):
@@ -36,11 +39,12 @@ if not os.path.exists(DB_FILE):
 if 'auth' not in st.session_state: st.session_state.auth = False
 if 'user' not in st.session_state: st.session_state.user = None
 
-# --- 2. LOGIN UI (Split Screen) ---
+# --- 2. ENHANCED LOGIN UI (Split Screen) ---
 if not st.session_state.auth:
-    login_col, img_col = st.columns([1, 2])
+    login_col, img_col = st.columns([1, 2]) # 1 part login, 2 parts image
+    
     with login_col:
-        st.markdown("# 🏗️ procurement \n### Approval Portal")
+        st.markdown("# 🏗️ Resolute \n### Approval Portal")
         st.divider()
         user_select = st.selectbox("Select Role", list(USERS.keys()))
         pass_input = st.text_input("Password", type="password")
@@ -51,37 +55,38 @@ if not st.session_state.auth:
                 st.rerun()
             else:
                 st.error("Invalid Password")
+    
     with img_col:
+        # High-quality office/industrial architecture image
         st.image("https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200", 
                  caption="Resolute Procurement Management", use_container_width=True)
     st.stop()
 
-# --- 3. HELPER FUNCTIONS ---
-def get_data(): return pd.read_csv(DB_FILE)
-def save_data(df): df.to_csv(DB_FILE, index=False)
-
-# --- 4. NAVIGATION ---
+# --- 3. NAVIGATION & SIDEBAR ---
 st.sidebar.title(f"👤 {st.session_state.user}")
 if st.sidebar.button("Logout"):
-    st.session_state.auth = False; st.session_state.user = None; st.rerun()
+    st.session_state.auth = False ; st.session_state.user = None ; st.rerun()
+
+def get_data(): return pd.read_csv(DB_FILE)
+def save_data(df): df.to_csv(DB_FILE, index=False)
 
 if st.session_state.user in ["BOMTEAM", "NONBOMTEAM"]:
     menu = st.sidebar.radio("Menu", ["Data Entry", "Status Board"])
 elif st.session_state.user == "HOD":
-    menu = st.sidebar.radio("Menu", ["BOM Team Requests", "Dashboard", "Audit Logs"])
+    menu = st.sidebar.radio("Menu", ["BOM Team Requests", "NonBOM Team", "Dashboard", "Audit Logs"])
 elif st.session_state.user == "GM":
     menu = st.sidebar.radio("Menu", ["BOM Team Requests", "Dashboard", "Audit Logs"])
 
-# --- 5. DATA ENTRY ---
-if menu == "Initiate the Price approval":
+# --- 4. DATA ENTRY ---
+if menu == "Data Entry":
     st.header(f"New Price Request - {st.session_state.user}")
     with st.form("entry_form", clear_on_submit=True):
-        c1, c2 = st.columns(2)
-        with c1:
+        col1, col2 = st.columns(2)
+        with col1:
             proj, part = st.text_input("Project"), st.text_input("Part Number")
             desc = st.text_area("Description")
-        with c2:
-            bom = st.number_input("BOM", min_value=0)
+        with col2:
+            bom = st.number_input("BOM/Qty", min_value=0)
             uom = st.selectbox("UOM", ["Nos", "Sets", "Mtrs", "Kgs"])
             supp, price = st.text_input("Supplier"), st.number_input("Price", min_value=0.0)
         rem = st.text_input("Remarks")
@@ -100,13 +105,13 @@ if menu == "Initiate the Price approval":
             st.success(f"Request {req_id} submitted!")
             st.rerun()
 
-# --- 6. APPROVAL PANEL ---
-elif menu == "BOM Team-Requests":
+# --- 5. HOD/GM APPROVAL (Existing Logic) ---
+elif menu == "BOM Team Requests" and st.session_state.user in ["HOD", "GM"]:
     role = st.session_state.user
     st.header(f"{role} Approval Panel")
     df = get_data()
-    target_status = "Pending HOD" if role == "HOD" else "Pending GM"
-    pending = df[df["Status"] == target_status]
+    status_to_check = "Pending HOD" if role == "HOD" else "Pending GM"
+    pending = df[df["Status"] == status_to_check]
     
     if pending.empty:
         st.info(f"No requests pending for {role}.")
@@ -126,12 +131,12 @@ elif menu == "BOM Team-Requests":
                     save_data(df)
                     st.rerun()
 
-# --- 7. STYLED DASHBOARD ---
+# --- 6. ENHANCED DASHBOARD / AUDIT LOGS ---
 elif menu in ["Audit Logs", "Dashboard", "Status Board"]:
-    st.header("📊 Price approved Transaction records/Audit History")
+    st.header("📊 Transaction Audit History")
     df = get_data()
     
-    # Apply colors to ALL three relevant columns
-    styled_df = df.style.applymap(apply_color_logic, subset=['HOD Approval', 'GM Approval', 'Status'])
+    # Apply the background coloring logic to the 'Status' column
+    styled_df = df.style.applymap(style_status, subset=['Status'])
     
     st.dataframe(styled_df, use_container_width=True, height=600)
