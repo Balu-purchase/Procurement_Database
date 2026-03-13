@@ -40,7 +40,7 @@ if 'user' not in st.session_state: st.session_state.user = None
 if not st.session_state.auth:
     login_col, img_col = st.columns([1, 2])
     with login_col:
-        st.markdown("# 🏗️ Resolute \n### Approval Portal")
+        st.markdown("# 🏗️ procurement \n### Approval Portal")
         st.divider()
         user_select = st.selectbox("Select Role", list(USERS.keys()))
         pass_input = st.text_input("Password", type="password")
@@ -73,7 +73,7 @@ elif st.session_state.user == "GM":
     menu = st.sidebar.radio("Menu", ["BOM Team Requests", "Dashboard", "Audit Logs"])
 
 # --- 5. DATA ENTRY ---
-if menu == "Data Entry":
+if menu == "Initiate the Price approval":
     st.header(f"New Price Request - {st.session_state.user}")
     with st.form("entry_form", clear_on_submit=True):
         c1, c2 = st.columns(2)
@@ -81,7 +81,7 @@ if menu == "Data Entry":
             proj, part = st.text_input("Project"), st.text_input("Part Number")
             desc = st.text_area("Description")
         with c2:
-            bom = st.number_input("BOM/Qty", min_value=0)
+            bom = st.number_input("BOM", min_value=0)
             uom = st.selectbox("UOM", ["Nos", "Sets", "Mtrs", "Kgs"])
             supp, price = st.text_input("Supplier"), st.number_input("Price", min_value=0.0)
         rem = st.text_input("Remarks")
@@ -101,7 +101,7 @@ if menu == "Data Entry":
             st.rerun()
 
 # --- 6. APPROVAL PANEL ---
-elif menu == "BOM Team Requests":
+elif menu == "BOM Team-Requests":
     role = st.session_state.user
     st.header(f"{role} Approval Panel")
     df = get_data()
@@ -128,7 +128,7 @@ elif menu == "BOM Team Requests":
 
 # --- 7. STYLED DASHBOARD ---
 elif menu in ["Audit Logs", "Dashboard", "Status Board"]:
-    st.header("📊 Transaction Audit History")
+    st.header("📊 Price approved Transaction records/Audit History")
     df = get_data()
     
     # Apply colors to ALL three relevant columns
