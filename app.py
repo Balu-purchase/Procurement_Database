@@ -2,14 +2,13 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import os
-import smtplib  # Added for real email
+import smtplib
 from email.mime.text import MIMEText
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="Resolute Approval System", layout="wide")
 DB_FILE = "resolute_db.csv"
 
-# User Credentials
 USERS = {
     "BOMTEAM": "BOM123",
     "NONBOMTEAM": "NONBOM123",
@@ -17,163 +16,127 @@ USERS = {
     "GM": "GM123"
 }
 
+# --- NEW: STYLING FUNCTION FOR DASHBOARD ---
+def style_status(val):
+    val_upper = str(val).upper()
+    if "APPROVED SUCCESSFULLY" in val_upper or val_upper == "APPROVED":
+        return 'background-color: green; color: white; font-weight: bold'
+    elif "PENDING" in val_upper:
+        return 'background-color: #FFCC00; color: black; font-weight: bold' # Light Orange
+    elif "REJECTED" in val_upper:
+        return 'background-color: red; color: white; font-weight: bold'
+    return ''
+
 # --- EMAIL FUNCTION ---
-# Note: You need a Gmail App Password to make this work for real.
 def send_notification(subject, body, to_email="hod_email@example.com"):
-    # This is a placeholder. To enable real emails, uncomment the lines below 
-    # and provide your credentials.
     st.info(f"📧 Notification Triggered: {subject}")
-    # try:
-    #     msg = MIMEText(body)
-    #     msg['Subject'] = subject
-    #     msg['From'] = "your_email@gmail.com"
-    #     msg['To'] = to_email
-    #     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-    #         server.login("your_email@gmail.com", "your_app_password")
-    #         server.send_message(msg)
-    # except Exception as e:
-    #     st.error(f"Email failed: {e}")
 
 # Database Initialization
 if not os.path.exists(DB_FILE):
-    cols = [
-        "Request ID", "Project", "Part Number", "Description", "BOM", "UOM", 
-        "Supplier", "Price", "Remarks", "HOD Approval", "HOD Comments", 
-        "GM Approval", "GM Comments", "Status", "Timestamp", "Raised By"
-    ]
+    cols = ["Request ID", "Project", "Part Number", "Description", "BOM", "UOM", "Supplier", "Price", "Remarks", "HOD Approval", "HOD Comments", "GM Approval", "GM Comments", "Status", "Timestamp", "Raised By"]
     pd.DataFrame(columns=cols).to_csv(DB_FILE, index=False)
 
-# Session Management
 if 'auth' not in st.session_state: st.session_state.auth = False
 if 'user' not in st.session_state: st.session_state.user = None
 
-# --- 2. LOGIN / LOGOUT UI ---
+# --- 2. ENHANCED LOGIN UI (Split Screen) ---
 if not st.session_state.auth:
-    st.title("🏗️ Resolute Approval Portal")
-    user_select = st.selectbox("Select Role", list(USERS.keys()))
-    pass_input = st.text_input("Password", type="password")
-    if st.button("Login"):
-        if pass_input == USERS[user_select]:
-            st.session_state.auth = True
-            st.session_state.user = user_select
-            st.rerun()
-        else:
-            st.error("Invalid Password")
+    login_col, img_col = st.columns([1, 2]) # 1 part login, 2 parts image
+    
+    with login_col:
+        st.markdown("# 🏗️ Resolute \n### Approval Portal")
+        st.divider()
+        user_select = st.selectbox("Select Role", list(USERS.keys()))
+        pass_input = st.text_input("Password", type="password")
+        if st.button("Login", use_container_width=True):
+            if pass_input == USERS[user_select]:
+                st.session_state.auth = True
+                st.session_state.user = user_select
+                st.rerun()
+            else:
+                st.error("Invalid Password")
+    
+    with img_col:
+        # High-quality office/industrial architecture image
+        st.image("https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200", 
+                 caption="Resolute Procurement Management", use_container_width=True)
     st.stop()
 
-st.sidebar.title(f"Logged in: {st.session_state.user}")
+# --- 3. NAVIGATION & SIDEBAR ---
+st.sidebar.title(f"👤 {st.session_state.user}")
 if st.sidebar.button("Logout"):
-    st.session_state.auth = False
-    st.session_state.user = None
-    st.rerun()
+    st.session_state.auth = False ; st.session_state.user = None ; st.rerun()
 
-# --- 3. DATA PERSISTENCE HELPERS ---
-def get_data(): 
-    return pd.read_csv(DB_FILE)
+def get_data(): return pd.read_csv(DB_FILE)
+def save_data(df): df.to_csv(DB_FILE, index=False)
 
-def save_data(df): 
-    df.to_csv(DB_FILE, index=False)
-
-# --- 4. NAVIGATION LOGIC ---
-# Standardized menu names to prevent logic errors
 if st.session_state.user in ["BOMTEAM", "NONBOMTEAM"]:
     menu = st.sidebar.radio("Menu", ["Data Entry", "Status Board"])
 elif st.session_state.user == "HOD":
     menu = st.sidebar.radio("Menu", ["BOM Team Requests", "NonBOM Team", "Dashboard", "Audit Logs"])
 elif st.session_state.user == "GM":
-    # FIXED: Added BOM Team Requests here so it matches the IF statement below
     menu = st.sidebar.radio("Menu", ["BOM Team Requests", "Dashboard", "Audit Logs"])
 
-# --- 5. DATA ENTRY (BOM & NON-BOM) ---
+# --- 4. DATA ENTRY ---
 if menu == "Data Entry":
     st.header(f"New Price Request - {st.session_state.user}")
     with st.form("entry_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
-            proj = st.text_input("Project")
-            part = st.text_input("Part Number")
+            proj, part = st.text_input("Project"), st.text_input("Part Number")
             desc = st.text_area("Description")
         with col2:
             bom = st.number_input("BOM/Qty", min_value=0)
             uom = st.selectbox("UOM", ["Nos", "Sets", "Mtrs", "Kgs"])
-            supp = st.text_input("Supplier")
-            price = st.number_input("Price", min_value=0.0)
+            supp, price = st.text_input("Supplier"), st.number_input("Price", min_value=0.0)
         rem = st.text_input("Remarks")
         
         if st.form_submit_button("Submit Request"):
             req_id = f"REQ-{datetime.now().strftime('%y%m%d%H%M%S')}"
             new_row = {
-                "Request ID": req_id, "Project": proj, "Part Number": part,
-                "Description": desc, "BOM": bom, "UOM": uom, "Supplier": supp,
-                "Price": price, "Remarks": rem, "HOD Approval": "Pending",
-                "HOD Comments": "-", "GM Approval": "Pending", "GM Comments": "-",
-                "Status": "Pending HOD", "Timestamp": datetime.now(), 
-                "Raised By": st.session_state.user
+                "Request ID": req_id, "Project": proj, "Part Number": part, "Description": desc, 
+                "BOM": bom, "UOM": uom, "Supplier": supp, "Price": price, "Remarks": rem, 
+                "HOD Approval": "Pending", "HOD Comments": "-", "GM Approval": "Pending", 
+                "GM Comments": "-", "Status": "Pending HOD", "Timestamp": datetime.now(), "Raised By": st.session_state.user
             }
             df = get_data()
             df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
             save_data(df)
-            
-            # TRIGGER EMAIL TO HOD
-            send_notification(f"Price approval request received - {req_id}", f"New request {req_id} from BOM Team is pending.")
-            
             st.success(f"Request {req_id} submitted!")
             st.rerun()
 
-# --- 6. HOD APPROVAL SECTION ---
-elif menu == "BOM Team Requests" and st.session_state.user == "HOD":
-    st.header("HOD Approval Panel")
+# --- 5. HOD/GM APPROVAL (Existing Logic) ---
+elif menu == "BOM Team Requests" and st.session_state.user in ["HOD", "GM"]:
+    role = st.session_state.user
+    st.header(f"{role} Approval Panel")
     df = get_data()
-    pending_hod = df[df["Status"] == "Pending HOD"]
+    status_to_check = "Pending HOD" if role == "HOD" else "Pending GM"
+    pending = df[df["Status"] == status_to_check]
     
-    if pending_hod.empty:
-        st.info("No requests pending for HOD.")
+    if pending.empty:
+        st.info(f"No requests pending for {role}.")
     else:
-        for i, row in pending_hod.iterrows():
+        for i, row in pending.iterrows():
             with st.expander(f"ID: {row['Request ID']} | Project: {row['Project']}"):
                 st.write(row)
-                decision = st.selectbox("Decision", ["Pending", "Approved", "Rejected"], key=f"h_{i}")
-                h_comm = st.text_input("HOD Comments", key=f"hc_{i}")
-                if st.button("Submit HOD Decision", key=f"hb_{i}"):
-                    df.at[i, "HOD Approval"] = decision
-                    df.at[i, "HOD Comments"] = h_comm
+                decision = st.selectbox("Decision", ["Pending", "Approved", "Rejected"], key=f"d_{i}")
+                comm = st.text_input("Comments", key=f"c_{i}")
+                if st.button("Submit Decision", key=f"b_{i}"):
+                    df.at[i, f"{role} Approval"] = decision
+                    df.at[i, f"{role} Comments"] = comm
                     if decision == "Approved":
-                        df.at[i, "Status"] = "Pending GM"
-                        # TRIGGER EMAIL TO GM
-                        send_notification(f"Price approval request received - {row['Request ID']}", "HOD has approved. Final GM approval needed.")
+                        df.at[i, "Status"] = "Pending GM" if role == "HOD" else "Approved Successfully"
                     elif decision == "Rejected":
-                        df.at[i, "Status"] = f"Rejected by HOD: {h_comm}"
+                        df.at[i, "Status"] = f"Rejected by {role}"
                     save_data(df)
                     st.rerun()
 
-# --- 7. GM APPROVAL SECTION ---
-elif menu == "BOM Team Requests" and st.session_state.user == "GM":
-    st.header("GM Final Approval Panel")
-    df = get_data()
-    # FIXED: The GM logic now correctly looks for "Pending GM" status
-    pending_gm = df[df["Status"] == "Pending GM"]
-    
-    if pending_gm.empty:
-        st.info("No requests pending for GM.")
-    else:
-        for i, row in pending_gm.iterrows():
-            with st.expander(f"ID: {row['Request ID']} (Approved by HOD)"):
-                st.write(f"HOD Comments: {row['HOD Comments']}")
-                st.write(row)
-                decision = st.selectbox("Final Decision", ["Pending", "Approved", "Rejected"], key=f"g_{i}")
-                g_comm = st.text_input("GM Comments", key=f"gc_{i}")
-                if st.button("Confirm Final Approval", key=f"gb_{i}"):
-                    df.at[i, "GM Approval"] = decision
-                    df.at[i, "GM Comments"] = g_comm
-                    if decision == "Approved":
-                        df.at[i, "Status"] = "Approved Successfully"
-                        send_notification("Price Approval Success", f"Request {row['Request ID']} has been fully approved.")
-                    elif decision == "Rejected":
-                        df.at[i, "Status"] = f"Rejected by GM: {g_comm}"
-                    save_data(df)
-                    st.rerun()
-
-# --- 8. AUDIT LOGS / DASHBOARD ---
+# --- 6. ENHANCED DASHBOARD / AUDIT LOGS ---
 elif menu in ["Audit Logs", "Dashboard", "Status Board"]:
-    st.header("Transaction Audit History")
-    st.dataframe(get_data())
+    st.header("📊 Transaction Audit History")
+    df = get_data()
+    
+    # Apply the background coloring logic to the 'Status' column
+    styled_df = df.style.applymap(style_status, subset=['Status'])
+    
+    st.dataframe(styled_df, use_container_width=True, height=600)
