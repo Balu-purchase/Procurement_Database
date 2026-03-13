@@ -2,19 +2,14 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import os
-import urllib.parse  # For formatting the WhatsApp message
+import smtplib  # Added for real email
+from email.mime.text import MIMEText
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="Resolute Approval System", layout="wide")
 DB_FILE = "resolute_db.csv"
 
-# WhatsApp Numbers (Must include Country Code, e.g., 91 for India)
-WHATSAPP_NUMBERS = {
-    "HOD": "91XXXXXXXXXX",       # Replace with HOD's Phone Number
-    "GM": "91XXXXXXXXXX",        # Replace with GM's Phone Number
-    "BOMTEAM": "91XXXXXXXXXX"    # Replace with BOM Team Phone Number
-}
-
+# User Credentials
 USERS = {
     "BOMTEAM": "BOM123",
     "NONBOMTEAM": "NONBOM123",
@@ -22,112 +17,163 @@ USERS = {
     "GM": "GM123"
 }
 
-# Database Init
+# --- EMAIL FUNCTION ---
+# Note: You need a Gmail App Password to make this work for real.
+def send_notification(subject, body, to_email="hod_email@example.com"):
+    # This is a placeholder. To enable real emails, uncomment the lines below 
+    # and provide your credentials.
+    st.info(f"📧 Notification Triggered: {subject}")
+    # try:
+    #     msg = MIMEText(body)
+    #     msg['Subject'] = subject
+    #     msg['From'] = "your_email@gmail.com"
+    #     msg['To'] = to_email
+    #     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+    #         server.login("your_email@gmail.com", "your_app_password")
+    #         server.send_message(msg)
+    # except Exception as e:
+    #     st.error(f"Email failed: {e}")
+
+# Database Initialization
 if not os.path.exists(DB_FILE):
-    cols = ["Request ID", "Project", "Part Number", "Description", "BOM", "UOM", 
-            "Supplier", "Price", "Remarks", "HOD Approval", "HOD Comments", 
-            "GM Approval", "GM Comments", "Status", "Timestamp", "Raised By"]
+    cols = [
+        "Request ID", "Project", "Part Number", "Description", "BOM", "UOM", 
+        "Supplier", "Price", "Remarks", "HOD Approval", "HOD Comments", 
+        "GM Approval", "GM Comments", "Status", "Timestamp", "Raised By"
+    ]
     pd.DataFrame(columns=cols).to_csv(DB_FILE, index=False)
 
-# Session State
+# Session Management
 if 'auth' not in st.session_state: st.session_state.auth = False
 if 'user' not in st.session_state: st.session_state.user = None
 
-# --- 2. LOGIN PAGE (LEFT SIDE DESIGN) ---
+# --- 2. LOGIN / LOGOUT UI ---
 if not st.session_state.auth:
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        st.subheader("RESOLUTE LOGIN")
-        u_sel = st.selectbox("Select Role", list(USERS.keys()))
-        p_sel = st.text_input("Password", type="password")
-        if st.button("SIGN IN", use_container_width=True):
-            if p_sel == USERS[u_sel]:
-                st.session_state.auth = True
-                st.session_state.user = u_sel
-                st.rerun()
-            else:
-                st.error("Incorrect Password")
-    with col2:
-        st.info("### Price Approval Management System\nWelcome to the official Resolute Electronics Procurement Portal.")
+    st.title("🏗️ Resolute Approval Portal")
+    user_select = st.selectbox("Select Role", list(USERS.keys()))
+    pass_input = st.text_input("Password", type="password")
+    if st.button("Login"):
+        if pass_input == USERS[user_select]:
+            st.session_state.auth = True
+            st.session_state.user = user_select
+            st.rerun()
+        else:
+            st.error("Invalid Password")
     st.stop()
 
-# --- 3. WHATSAPP HELPER ---
-def open_whatsapp(phone, message):
-    # This creates a link that opens WhatsApp with a pre-filled message
-    encoded_msg = urllib.parse.quote(message)
-    link = f"https://wa.me/{phone}?text={encoded_msg}"
-    # This displays a link that the user clicks to send the notification
-    st.markdown(f"""<a href="{link}" target="_blank" style="background-color: #25D366; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">📲 Send WhatsApp Notification</a>""", unsafe_allow_html=True)
-
-# --- 4. DATA HELPERS ---
-def get_data(): return pd.read_csv(DB_FILE)
-def save_data(df): df.to_csv(DB_FILE, index=False)
-
-st.sidebar.title(f"👤 {st.session_state.user}")
+st.sidebar.title(f"Logged in: {st.session_state.user}")
 if st.sidebar.button("Logout"):
     st.session_state.auth = False
+    st.session_state.user = None
     st.rerun()
 
-menu_options = {
-    "BOMTEAM": ["Data Entry", "Status Board"],
-    "NONBOMTEAM": ["Data Entry", "Status Board"],
-    "HOD": ["BOM Team Requests", "Dashboard", "Audit Logs"],
-    "GM": ["BOM Team Requests", "Dashboard", "Audit Logs"]
-}
-menu = st.sidebar.radio("Navigate", menu_options[st.session_state.user])
+# --- 3. DATA PERSISTENCE HELPERS ---
+def get_data(): 
+    return pd.read_csv(DB_FILE)
 
-# --- 5. DATA ENTRY ---
+def save_data(df): 
+    df.to_csv(DB_FILE, index=False)
+
+# --- 4. NAVIGATION LOGIC ---
+# Standardized menu names to prevent logic errors
+if st.session_state.user in ["BOMTEAM", "NONBOMTEAM"]:
+    menu = st.sidebar.radio("Menu", ["Data Entry", "Status Board"])
+elif st.session_state.user == "HOD":
+    menu = st.sidebar.radio("Menu", ["BOM Team Requests", "NonBOM Team", "Dashboard", "Audit Logs"])
+elif st.session_state.user == "GM":
+    # FIXED: Added BOM Team Requests here so it matches the IF statement below
+    menu = st.sidebar.radio("Menu", ["BOM Team Requests", "Dashboard", "Audit Logs"])
+
+# --- 5. DATA ENTRY (BOM & NON-BOM) ---
 if menu == "Data Entry":
-    st.header("Price Approval Request Form")
-    with st.form("entry_form"):
-        c1, c2 = st.columns(2)
-        with c1:
-            proj = st.text_input("Project Name")
+    st.header(f"New Price Request - {st.session_state.user}")
+    with st.form("entry_form", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            proj = st.text_input("Project")
             part = st.text_input("Part Number")
-        with c2:
+            desc = st.text_area("Description")
+        with col2:
+            bom = st.number_input("BOM/Qty", min_value=0)
+            uom = st.selectbox("UOM", ["Nos", "Sets", "Mtrs", "Kgs"])
             supp = st.text_input("Supplier")
-            price = st.number_input("Unit Price", min_value=0.0)
+            price = st.number_input("Price", min_value=0.0)
+        rem = st.text_input("Remarks")
         
-        if st.form_submit_button("Save to Database"):
-            req_id = f"REQ-{datetime.now().strftime('%y%m%d%H%M')}"
+        if st.form_submit_button("Submit Request"):
+            req_id = f"REQ-{datetime.now().strftime('%y%m%d%H%M%S')}"
             new_row = {
-                "Request ID": req_id, "Project": proj, "Part Number": part, "Description": "-",
-                "BOM": 1, "UOM": "Nos", "Supplier": supp, "Price": price, "Remarks": "-",
-                "HOD Approval": "Pending", "HOD Comments": "-", "GM Approval": "Pending",
-                "GM Comments": "-", "Status": "Pending HOD", "Timestamp": datetime.now(),
+                "Request ID": req_id, "Project": proj, "Part Number": part,
+                "Description": desc, "BOM": bom, "UOM": uom, "Supplier": supp,
+                "Price": price, "Remarks": rem, "HOD Approval": "Pending",
+                "HOD Comments": "-", "GM Approval": "Pending", "GM Comments": "-",
+                "Status": "Pending HOD", "Timestamp": datetime.now(), 
                 "Raised By": st.session_state.user
             }
             df = get_data()
             df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
             save_data(df)
-            st.success(f"Request {req_id} saved!")
+            
+            # TRIGGER EMAIL TO HOD
+            send_notification(f"Price approval request received - {req_id}", f"New request {req_id} from BOM Team is pending.")
+            
+            st.success(f"Request {req_id} submitted!")
+            st.rerun()
 
-    # WHATSAPP TRIGGER BUTTON (Outside form to allow link generation)
-    st.subheader("Step 2: Notify HOD")
-    last_req = get_data().iloc[-1]
-    msg = f"*Price Approval Needed*\n*ID:* {last_req['Request ID']}\n*Project:* {last_req['Project']}\n*Price:* {last_req['Price']}\n*Link:* https://resolute-app.streamlit.app"
-    open_whatsapp(WHATSAPP_NUMBERS["HOD"], msg)
-
-# --- 6. HOD / GM APPROVAL (SIMILAR LOGIC) ---
-elif menu == "BOM Team Requests":
-    st.header("Approval Panel")
+# --- 6. HOD APPROVAL SECTION ---
+elif menu == "BOM Team Requests" and st.session_state.user == "HOD":
+    st.header("HOD Approval Panel")
     df = get_data()
-    # Logic for filtering based on HOD or GM roles
-    target_status = "Pending HOD" if st.session_state.user == "HOD" else "Pending GM"
-    pending = df[df["Status"] == target_status]
+    pending_hod = df[df["Status"] == "Pending HOD"]
     
-    for i, row in pending.iterrows():
-        with st.expander(f"Review {row['Request ID']}"):
-            dec = st.selectbox("Action", ["Pending", "Approved", "Rejected"], key=f"d{i}")
-            if st.button("Save Decision", key=f"b{i}"):
-                df.at[i, "Status"] = "Pending GM" if dec == "Approved" and st.session_state.user == "HOD" else "Finalized"
-                save_data(df)
-                st.success("Decision Saved! Use the button below to notify the next person.")
-                
-                # Dynamic WhatsApp Link
-                next_person = "GM" if st.session_state.user == "HOD" else "BOMTEAM"
-                next_msg = f"*Update on {row['Request ID']}*\n*Decision:* {dec}\n*By:* {st.session_state.user}"
-                open_whatsapp(WHATSAPP_NUMBERS[next_person], next_msg)
+    if pending_hod.empty:
+        st.info("No requests pending for HOD.")
+    else:
+        for i, row in pending_hod.iterrows():
+            with st.expander(f"ID: {row['Request ID']} | Project: {row['Project']}"):
+                st.write(row)
+                decision = st.selectbox("Decision", ["Pending", "Approved", "Rejected"], key=f"h_{i}")
+                h_comm = st.text_input("HOD Comments", key=f"hc_{i}")
+                if st.button("Submit HOD Decision", key=f"hb_{i}"):
+                    df.at[i, "HOD Approval"] = decision
+                    df.at[i, "HOD Comments"] = h_comm
+                    if decision == "Approved":
+                        df.at[i, "Status"] = "Pending GM"
+                        # TRIGGER EMAIL TO GM
+                        send_notification(f"Price approval request received - {row['Request ID']}", "HOD has approved. Final GM approval needed.")
+                    elif decision == "Rejected":
+                        df.at[i, "Status"] = f"Rejected by HOD: {h_comm}"
+                    save_data(df)
+                    st.rerun()
 
+# --- 7. GM APPROVAL SECTION ---
+elif menu == "BOM Team Requests" and st.session_state.user == "GM":
+    st.header("GM Final Approval Panel")
+    df = get_data()
+    # FIXED: The GM logic now correctly looks for "Pending GM" status
+    pending_gm = df[df["Status"] == "Pending GM"]
+    
+    if pending_gm.empty:
+        st.info("No requests pending for GM.")
+    else:
+        for i, row in pending_gm.iterrows():
+            with st.expander(f"ID: {row['Request ID']} (Approved by HOD)"):
+                st.write(f"HOD Comments: {row['HOD Comments']}")
+                st.write(row)
+                decision = st.selectbox("Final Decision", ["Pending", "Approved", "Rejected"], key=f"g_{i}")
+                g_comm = st.text_input("GM Comments", key=f"gc_{i}")
+                if st.button("Confirm Final Approval", key=f"gb_{i}"):
+                    df.at[i, "GM Approval"] = decision
+                    df.at[i, "GM Comments"] = g_comm
+                    if decision == "Approved":
+                        df.at[i, "Status"] = "Approved Successfully"
+                        send_notification("Price Approval Success", f"Request {row['Request ID']} has been fully approved.")
+                    elif decision == "Rejected":
+                        df.at[i, "Status"] = f"Rejected by GM: {g_comm}"
+                    save_data(df)
+                    st.rerun()
+
+# --- 8. AUDIT LOGS / DASHBOARD ---
 elif menu in ["Audit Logs", "Dashboard", "Status Board"]:
+    st.header("Transaction Audit History")
     st.dataframe(get_data())
