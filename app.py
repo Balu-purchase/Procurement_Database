@@ -31,16 +31,15 @@ if 'user' not in st.session_state: st.session_state.user = None
 # --- 2. LOGIN / LOGOUT UI ---
 if not st.session_state.auth:
     st.title("🏗️ Resolute Approval Portal")
-    with st.container():
-        user_select = st.selectbox("Select Role", list(USERS.keys()))
-        pass_input = st.text_input("Password", type="password")
-        if st.button("Login"):
-            if pass_input == USERS[user_select]:
-                st.session_state.auth = True
-                st.session_state.user = user_select
-                st.rerun()
-            else:
-                st.error("Invalid Password")
+    user_select = st.selectbox("Select Role", list(USERS.keys()))
+    pass_input = st.text_input("Password", type="password")
+    if st.button("Login"):
+        if pass_input == USERS[user_select]:
+            st.session_state.auth = True
+            st.session_state.user = user_select
+            st.rerun()
+        else:
+            st.error("Invalid Password")
     st.stop()
 
 # Logout Button in Sidebar
@@ -51,19 +50,22 @@ if st.sidebar.button("Logout"):
     st.rerun()
 
 # --- 3. DATA PERSISTENCE HELPERS ---
-def get_data(): return pd.read_csv(DB_FILE)
-def save_data(df): df.to_csv(DB_FILE, index=False)
+def get_data(): 
+    return pd.read_csv(DB_FILE)
+
+def save_data(df): 
+    df.to_csv(DB_FILE, index=False)
 
 # --- 4. NAVIGATION LOGIC ---
 if st.session_state.user in ["BOMTEAM", "NONBOMTEAM"]:
-    menu = st.sidebar.radio("Menu", ["Data Entry", "My Requests"])
+    menu = st.sidebar.radio("Menu", ["Data Entry", "Status Board"])
 elif st.session_state.user == "HOD":
-    menu = st.sidebar.radio("Menu", ["Pending Approvals", "Audit Logs"])
+    menu = st.sidebar.radio("Menu", ["BOM Team Requests", "NonBOM Team", "Dashboard", "Audit Logs"])
 elif st.session_state.user == "GM":
-    menu = st.sidebar.radio("Menu", ["Final Approvals", "Audit Logs"])
+    menu = st.sidebar.radio("Menu", ["BOM Team Requests", "Dashboard", "Audit Logs"])
 
-# --- 5. BOMTEAM / NONBOM ENTRY ---
-if menu == "Data Entry":
+# --- 5. DATA ENTRY (BOM & NON-BOM) ---
+if menu in ["Data Entry", "BOM Entry"]:
     st.header(f"New Price Request - {st.session_state.user}")
     with st.form("entry_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
@@ -76,7 +78,6 @@ if menu == "Data Entry":
             uom = st.selectbox("UOM", ["Nos", "Sets", "Mtrs", "Kgs"])
             supp = st.text_input("Supplier")
             price = st.number_input("Price", min_value=0.0)
-        
         rem = st.text_input("Remarks")
         
         if st.form_submit_button("Submit Request"):
@@ -92,27 +93,34 @@ if menu == "Data Entry":
             df = get_data()
             df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
             save_data(df)
-            st.success(f"Request {req_id} submitted to HOD!")
-            st.info(f"📧 EMAIL SIMULATION: To: HOD | Sub: Price approval request received - {req_id}")
+            st.success(f"Request {req_id} submitted!")
+            st.info(f"📧 Notification sent to HOD - Subject: Price approval request received - {req_id}")
 
-    st.subheader("Current Database Status")
+    st.subheader("Your Submission Table")
     st.dataframe(get_data())
 
-# --- 6. HOD APPROVAL FLOW ---
-elif menu == "Pending Approvals":
-    st.header("HOD Approval Dashboard")
+# --- 6. HOD APPROVAL SECTION ---
+elif menu == "BOM Team Requests" and st.session_state.user == "HOD":
+    st.header("HOD Approval Panel")
     df = get_data()
-    pending = df[df["Status"] == "Pending HOD"]
+    pending_hod = df[df["Status"] == "Pending HOD"]
     
-    if pending.empty:
-        st.write("No requests waiting for your approval.")
+    if pending_hod.empty:
+        st.info("No requests pending for HOD.")
     else:
-        for i, row in pending.iterrows():
+        for i, row in pending_hod.iterrows():
             with st.expander(f"ID: {row['Request ID']} | Project: {row['Project']}"):
                 st.write(row)
                 decision = st.selectbox("Decision", ["Pending", "Approved", "Rejected"], key=f"h_{i}")
-                h_comm = st.text_input("Comments", key=f"hc_{i}")
-                if st.button("Confirm HOD Decision", key=f"hb_{i}"):
+                h_comm = st.text_input("HOD Comments", key=f"hc_{i}")
+                if st.button("Submit HOD Decision", key=f"hb_{i}"):
                     df.at[i, "HOD Approval"] = decision
                     df.at[i, "HOD Comments"] = h_comm
-                    if decision == "
+                    if decision == "Approved":
+                        df.at[i, "Status"] = "Pending GM"
+                    elif decision == "Rejected":
+                        df.at[i, "Status"] = f"Rejected by HOD: {h_comm}"
+                    save_data(df)
+                    st.rerun()
+
+# ---
