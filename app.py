@@ -1,332 +1,285 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import smtplib
-from email.mime.text import MIMEText
 import io
 
 st.set_page_config(page_title="Factory Procurement Portal", layout="wide")
 
-# ---------------- EMAIL SETTINGS ---------------- #
+# ------------------------------
+# SESSION STORAGE
+# ------------------------------
 
-EMAIL_ADDRESS = "jampina.balanaresh@gmail.com"
-EMAIL_PASSWORD = "YOUR_APP_PASSWORD"
+if "master_data" not in st.session_state:
+    st.session_state.master_data = []
 
-EMAILS = {
-    "BOMTEAM": "jampina.balanaresh@gmail.com",
-    "HOD": "balanareshbalu@gmail.com",
-    "GM_OFFICE": "purchase@resoluteelectronics.com"
-}
+if "daily_tracker" not in st.session_state:
+    st.session_state.daily_tracker = []
 
-def send_email(to_email, subject, message):
-    try:
-        msg = MIMEText(message)
-        msg["Subject"] = subject
-        msg["From"] = EMAIL_ADDRESS
-        msg["To"] = to_email
-
-        server = smtplib.SMTP("smtp.gmail.com", 587)
-        server.starttls()
-        server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-        server.send_message(msg)
-        server.quit()
-    except:
-        pass
-
-
-# ---------------- APPROVAL FILE GENERATOR ---------------- #
-
-def generate_approval_file(row):
-
-    text = f"""
-FACTORY PROCUREMENT APPROVAL
-
-Vendor : {row['Vendor']}
-Part Number : {row['Part']}
-Description : {row['Description']}
-Price : {row['Price']}
-QPS : {row['QPS']}
-BOM Type : {row['BOM']}
-
-Additional Comments :
-{row['Additional']}
-
-HOD Comments :
-{row['HOD_COMMENTS']}
-
-GM Comments :
-{row['GM_COMMENTS']}
-
-Status : {row['STATUS']}
-"""
-
-    return text
-
-
-# ---------------- SESSION STORAGE ---------------- #
-
-if "bom_data" not in st.session_state:
-    st.session_state.bom_data = []
+if "advance_payments" not in st.session_state:
+    st.session_state.advance_payments = []
 
 if "mis_data" not in st.session_state:
     st.session_state.mis_data = []
 
-if "advance_data" not in st.session_state:
-    st.session_state.advance_data = []
-
-if "daily_data" not in st.session_state:
-    st.session_state.daily_data = []
-
 if "auth" not in st.session_state:
     st.session_state.auth = False
 
+if "role" not in st.session_state:
+    st.session_state.role = None
 
-# ---------------- LOGIN PAGE ---------------- #
+# ------------------------------
+# HELPER FUNCTIONS
+# ------------------------------
+
+def get_signature():
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    return f"SIGNED BY {st.session_state.role} @ {now}"
+
+def style_status(val):
+    if "APPROVED" in str(val):
+        return "background-color:green;color:white;font-weight:bold"
+    if "REJECTED" in str(val):
+        return "background-color:red;color:white;font-weight:bold"
+    if "PENDING" in str(val):
+        return "background-color:orange;color:black;font-weight:bold"
+    return ""
+
+def export_excel(dataframe):
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        dataframe.to_excel(writer, index=False)
+    return output.getvalue()
+
+# ------------------------------
+# LOGIN PAGE
+# ------------------------------
 
 if not st.session_state.auth:
 
-    col1, col2 = st.columns([1,2])
+    col1,col2 = st.columns([1,2])
 
     with col1:
-
         st.title("LOGIN")
 
         uid = st.text_input("Username").upper()
         pwd = st.text_input("Password", type="password")
 
-        if st.button("Login"):
+        if st.button("ENTER SYSTEM"):
 
             users = {
                 "BOMTEAM":"BOM123",
-                "NONBOMTEAM":"NON123",
-                "HOD":"HOD123",
-                "GM_OFFICE":"GM123"
+                "NONBOMTEAM":"NONBOM123",
+                "HOD":"HOD789",
+                "GM_OFFICE":"GM2026"
             }
 
-            if uid in users and users[uid]==pwd:
-
-                st.session_state.auth=True
-                st.session_state.role=uid
+            if uid in users and users[uid] == pwd:
+                st.session_state.auth = True
+                st.session_state.role = uid
                 st.rerun()
+            else:
+                st.error("Invalid Credentials")
 
     with col2:
-        st.image(
-        "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d",
-        use_container_width=True)
+        st.image("https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d",use_container_width=True)
 
-
-# ---------------- MAIN SYSTEM ---------------- #
+# ------------------------------
+# MAIN DASHBOARD
+# ------------------------------
 
 else:
 
-    role = st.session_state.role
-    st.sidebar.write("Logged in:", role)
+    st.sidebar.title(f"👤 {st.session_state.role}")
 
+    if st.sidebar.button("Logout"):
+        st.session_state.auth=False
+        st.rerun()
 
-# ---------------- BOM TEAM ---------------- #
+    if st.session_state.role in ["HOD","GM_OFFICE"]:
+        menu = st.sidebar.radio("Navigation",[
+            "PENDING APPROVALS",
+            "NON-BOM REVIEW",
+            " DASHBOARD",
+            "AUDIT LOGS"
+        ])
+    else:
+        menu="MAIN"
 
-    if role == "BOMTEAM":
+    st.title("FACTORY PROCUREMENT PORTAL")
+    st.divider()
 
-        st.header("BOM Request Form")
+# ---------------------------------------------------------
+# BOM TEAM MODULE
+# ---------------------------------------------------------
+
+    if st.session_state.role == "BOMTEAM":
+
+        st.header("BOM PRICE REQUEST")
 
         with st.form("bom_form"):
 
-            vendor = st.text_input("Vendor")
-            part = st.text_input("Part Number")
-            desc = st.text_input("Description")
-            price = st.number_input("Price")
+            c1,c2,c3,c4 = st.columns(4)
+
+            vendor = c1.text_input("Vendor")
+            part = c2.text_input("Part Number")
+            desc = c3.text_input("Description")
+            price = c4.number_input("Price")
 
             qps = st.text_input("QPS")
 
-            bom_type = st.selectbox("BOM Type",
-                ["Normal BOM","Alternate BOM","New Development"])
+            submit = st.form_submit_button("Submit Request")
 
-            additional = st.text_area("Additional Comments")
+            if submit:
 
-            if st.form_submit_button("Submit"):
-
-                st.session_state.bom_data.append({
+                st.session_state.master_data.append({
 
                     "Vendor":vendor,
                     "Part":part,
                     "Description":desc,
+                    "Bom":Bom,
                     "Price":price,
                     "QPS":qps,
-                    "BOM":bom_type,
-                    "Additional":additional,
+                    "HOD_SIGN":"",
+                    "GM_SIGN":"",
+                    "STATUS":"PENDING AT HOD"
 
-                    "HOD_COMMENTS":"",
-                    "GM_COMMENTS":"",
-
-                    "CREATED_TIME":datetime.now(),
-                    "HOD_TIME":"",
-                    "GM_TIME":"",
-
-                    "STATUS":"PENDING HOD"
                 })
 
-                send_email(
-                    EMAILS["HOD"],
-                    "New BOM Request",
-                    f"{vendor} request waiting approval"
-                )
+                st.success("Request Submitted")
 
-        if st.session_state.bom_data:
+        if st.session_state.master_data:
 
-            df = pd.DataFrame(st.session_state.bom_data)
-            st.dataframe(df)
+            df = pd.DataFrame(st.session_state.master_data)
 
+            st.dataframe(df.style.applymap(style_status,subset=["STATUS"]),use_container_width=True)
 
-# ---------------- HOD APPROVAL ---------------- #
+# ---------------------------------------------------------
+# HOD / GM APPROVALS
+# ---------------------------------------------------------
 
-    if role == "HOD":
+    elif menu == "PENDING APPROVALS":
 
-        for i,row in enumerate(st.session_state.bom_data):
+        st.header("Approval Requested list")
 
-            if row["STATUS"]=="PENDING HOD":
+        for i,row in enumerate(st.session_state.master_data):
 
-                st.write(row["Vendor"],row["Part"])
+            show=False
 
-                comment = st.text_input("HOD Comment",key=i)
+            if st.session_state.role=="HOD" and row["STATUS"]=="PENDING AT HOD":
+                show=True
 
-                if st.button("Approve",key=f"a{i}"):
+            if st.session_state.role=="GM_OFFICE" and row["STATUS"]=="PENDING AT GM":
+                show=True
 
-                    st.session_state.bom_data[i]["HOD_COMMENTS"]=comment
-                    st.session_state.bom_data[i]["HOD_TIME"]=datetime.now()
-                    st.session_state.bom_data[i]["STATUS"]="PENDING GM"
+            if show:
 
-                    send_email(
-                        EMAILS["GM_OFFICE"],
-                        "Waiting GM Approval",
-                        row["Vendor"]
-                    )
+                st.container()
 
-                if st.button("Reject",key=f"r{i}"):
+                st.write(f"{row['Vendor']} | {row['Part']} | {row['Price']}")
 
-                    st.session_state.bom_data[i]["STATUS"]="REJECTED"
+                c1,c2 = st.columns(2)
 
-                    send_email(
-                        EMAILS["BOMTEAM"],
-                        "Request Rejected",
-                        row["Vendor"]
-                    )
+                if c1.button("APPROVE",key=f"a{i}"):
 
+                    sig = get_signature()
 
-# ---------------- GM APPROVAL ---------------- #
+                    if st.session_state.role=="HOD":
+                        st.session_state.master_data[i]["HOD_SIGN"]=sig
+                        st.session_state.master_data[i]["STATUS"]="PENDING AT GM"
 
-    if role == "GM_OFFICE":
+                    else:
+                        st.session_state.master_data[i]["GM_SIGN"]=sig
+                        st.session_state.master_data[i]["STATUS"]="APPROVED"
 
-        st.header("GM Dashboard")
+                    st.rerun()
 
-        for i,row in enumerate(st.session_state.bom_data):
+                if c2.button("REJECT",key=f"r{i}"):
 
-            if row["STATUS"]=="PENDING GM":
+                    st.session_state.master_data[i]["STATUS"]=f"REJECTED BY {st.session_state.role}"
+                    st.rerun()
 
-                st.write(row["Vendor"],row["Part"])
+# ---------------------------------------------------------
+# NON BOM TEAM
+# ---------------------------------------------------------
 
-                comment = st.text_input("GM Comment",key=f"g{i}")
+    elif st.session_state.role == "NONBOMTEAM":
 
-                if st.button("Approve",key=f"ga{i}"):
-
-                    st.session_state.bom_data[i]["GM_COMMENTS"]=comment
-                    st.session_state.bom_data[i]["GM_TIME"]=datetime.now()
-                    st.session_state.bom_data[i]["STATUS"]="APPROVED"
-
-                    send_email(
-                        EMAILS["BOMTEAM"],
-                        "Request Approved",
-                        row["Vendor"]
-                    )
-
-        approved = [r for r in st.session_state.bom_data if r["STATUS"]=="APPROVED"]
-
-        if approved:
-
-            st.subheader("Approved Requests")
-
-            df = pd.DataFrame(approved)
-            st.dataframe(df)
-
-            for r in approved:
-
-                file_data = generate_approval_file(r)
-
-                st.download_button(
-                    "Download Approval File",
-                    file_data,
-                    file_name=f"BOM_APPROVAL_{r['Vendor']}.txt"
-                )
-
-
-# ---------------- NON BOM TEAM ---------------- #
-
-    if role == "NONBOMTEAM":
-
-        tab1,tab2,tab3 = st.tabs(
-            ["Daily Tracker","Advance Payment","MIS Tracker"]
-        )
-
+        tab1,tab2,tab3 = st.tabs(["DAILY TRACKER","ADVANCE PAYMENT REQUEST","MIS TRACKER"])
 
 # DAILY TRACKER
 
         with tab1:
 
-            with st.form("daily"):
+            with st.form("daily_form"):
 
+                date = st.date_input("Date")
                 plant = st.text_input("Plant")
                 pr = st.number_input("PR Received")
-                po = st.number_input("PO Created")
+                po = st.number_input("PO Done")
 
                 if st.form_submit_button("Submit"):
 
-                    st.session_state.daily_data.append({
+                    st.session_state.daily_tracker.append({
 
+                        "Date":date,
                         "Plant":plant,
                         "PR":pr,
                         "PO":po,
                         "Balance":pr-po
+
                     })
 
-            if st.session_state.daily_data:
-                st.dataframe(pd.DataFrame(st.session_state.daily_data))
+            if st.session_state.daily_tracker:
 
+                df = pd.DataFrame(st.session_state.daily_tracker)
+                st.dataframe(df,use_container_width=True)
 
 # ADVANCE PAYMENT
 
         with tab2:
 
-            with st.form("advance"):
+            with st.form("advance_form"):
 
                 vendor = st.text_input("Vendor")
-                type = st.selectbox(
-                    "Type",
-                    ["Advance","Final","Part Payment"]
-                )
-
-                po = st.text_input("PO Number")
+                type = st.selectbox("Type",["Advance","Final","Part Payment"])
+                po = st.text_input("PO No")
                 amount = st.number_input("Amount")
 
-                if st.form_submit_button("Submit"):
+                status = st.selectbox("Payment Status",["PENDING","DONE","HOLD"])
 
-                    st.session_state.advance_data.append({
+                submit = st.form_submit_button("Submit")
+
+                if submit:
+
+                    st.session_state.advance_payments.append({
 
                         "Vendor":vendor,
                         "Type":type,
                         "PO":po,
-                        "Amount":amount
+                        "Amount":amount,
+                        "Status":status
+
                     })
 
-            if st.session_state.advance_data:
+            if st.session_state.advance_payments:
 
-                df = pd.DataFrame(st.session_state.advance_data)
-                st.dataframe(df)
+                df = pd.DataFrame(st.session_state.advance_payments)
 
+                st.dataframe(df,use_container_width=True)
+
+                excel = export_excel(df)
+
+                st.download_button(
+                    "Download Excel",
+                    excel,
+                    "advance_payments.xlsx"
+                )
 
 # MIS TRACKER
 
         with tab3:
 
-            with st.form("mis"):
+            with st.form("mis_form"):
 
                 supplier = st.text_input("Supplier")
                 po = st.text_input("PO No")
@@ -334,7 +287,9 @@ else:
                 received = st.number_input("Received Qty")
                 amount = st.number_input("Amount")
 
-                if st.form_submit_button("Submit"):
+                submit = st.form_submit_button("Submit")
+
+                if submit:
 
                     st.session_state.mis_data.append({
 
@@ -344,16 +299,87 @@ else:
                         "Received":received,
                         "Pending":qty-received,
                         "Amount":amount
+
                     })
 
             if st.session_state.mis_data:
 
                 df = pd.DataFrame(st.session_state.mis_data)
 
-                st.dataframe(df)
+                st.dataframe(df,use_container_width=True)
 
-                st.subheader("Vendor Spend Chart")
+                st.subheader("MIS Chart")
 
                 chart = df.groupby("Supplier")["Amount"].sum()
 
                 st.bar_chart(chart)
+
+                excel = export_excel(df)
+
+                st.download_button(
+                    "Download MIS Excel",
+                    excel,
+                    "mis_tracker.xlsx"
+                )
+
+# ---------------------------------------------------------
+# HOD PROFESSIONAL DASHBOARD
+# ---------------------------------------------------------
+
+    elif menu == "GM DASHBOARD":
+
+        st.header("GM PROCUREMENT DASHBOARD")
+
+        col1,col2,col3 = st.columns(3)
+
+        total_po = len(st.session_state.mis_data)
+        total_pay = sum([x["Amount"] for x in st.session_state.advance_payments]) if st.session_state.advance_payments else 0
+        total_bom = len(st.session_state.master_data)
+
+        col1.metric("Total MIS Entries",total_po)
+        col2.metric("Total Advance Payments",total_pay)
+        col3.metric("BOM Requests",total_bom)
+
+        if st.session_state.mis_data:
+
+            df = pd.DataFrame(st.session_state.mis_data)
+
+            st.subheader("Supplier Wise Amount")
+
+            chart = df.groupby("Supplier")["Amount"].sum()
+
+            st.bar_chart(chart)
+
+# ---------------------------------------------------------
+# NON BOM REVIEW
+# ---------------------------------------------------------
+
+    elif menu=="NON-BOM REVIEW":
+
+        st.header("Non BOM Review")
+
+        if st.session_state.daily_tracker:
+            st.write("Daily Tracker")
+            st.dataframe(pd.DataFrame(st.session_state.daily_tracker))
+
+        if st.session_state.advance_payments:
+            st.write("Advance Payments")
+            st.dataframe(pd.DataFrame(st.session_state.advance_payments))
+
+        if st.session_state.mis_data:
+            st.write("MIS Tracker")
+            st.dataframe(pd.DataFrame(st.session_state.mis_data))
+
+# ---------------------------------------------------------
+# AUDIT LOGS
+# ---------------------------------------------------------
+
+    elif menu=="AUDIT LOGS":
+
+        st.header("Audit Logs")
+
+        if st.session_state.master_data:
+
+            df = pd.DataFrame(st.session_state.master_data)
+
+            st.dataframe(df.style.applymap(style_status,subset=["STATUS"]),use_container_width=True)
