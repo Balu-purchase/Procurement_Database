@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 
 # --- 1. CONFIGURATION ---
-st.set_page_config(page_title="Resolute Approval System", layout="wide")
+st.set_page_config(page_title="Procurement System", layout="wide")
 DB_FILE = "resolute_db.csv"
 
 USERS = {
