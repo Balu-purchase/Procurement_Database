@@ -16,13 +16,16 @@ USERS = {
     "GM": "GM123"
 }
 
-# --- NEW: STYLING FUNCTION FOR DASHBOARD ---
+# --- STYLING FUNCTION (Bold + Full Cell Color) ---
 def style_status(val):
     val_upper = str(val).upper()
+    # Green for Approved
     if "APPROVED SUCCESSFULLY" in val_upper or val_upper == "APPROVED":
         return 'background-color: green; color: white; font-weight: bold'
+    # Light Orange for Pending
     elif "PENDING" in val_upper:
-        return 'background-color: #FFCC00; color: black; font-weight: bold' # Light Orange
+        return 'background-color: #FFCC00; color: black; font-weight: bold'
+    # Red for Rejected
     elif "REJECTED" in val_upper:
         return 'background-color: red; color: white; font-weight: bold'
     return ''
@@ -39,9 +42,9 @@ if not os.path.exists(DB_FILE):
 if 'auth' not in st.session_state: st.session_state.auth = False
 if 'user' not in st.session_state: st.session_state.user = None
 
-# --- 2. ENHANCED LOGIN UI (Split Screen) ---
+# --- 2. ENHANCED LOGIN UI (Left: Login, Right: Office Image) ---
 if not st.session_state.auth:
-    login_col, img_col = st.columns([1, 2]) # 1 part login, 2 parts image
+    login_col, img_col = st.columns([1, 2]) 
     
     with login_col:
         st.markdown("# 🏗️ Procurement \n### Approval Portal")
@@ -57,7 +60,6 @@ if not st.session_state.auth:
                 st.error("Invalid Password")
     
     with img_col:
-        # High-quality office/industrial architecture image
         st.image("https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200", 
                  caption="Resolute Procurement Management", use_container_width=True)
     st.stop()
@@ -105,7 +107,7 @@ if menu == "Data Entry":
             st.success(f"Request {req_id} submitted!")
             st.rerun()
 
-# --- 5. HOD/GM APPROVAL (Existing Logic) ---
+# --- 5. HOD/GM APPROVAL PANEL ---
 elif menu == "BOM Team Requests" and st.session_state.user in ["HOD", "GM"]:
     role = st.session_state.user
     st.header(f"{role} Approval Panel")
@@ -131,12 +133,15 @@ elif menu == "BOM Team Requests" and st.session_state.user in ["HOD", "GM"]:
                     save_data(df)
                     st.rerun()
 
-# --- 6. ENHANCED DASHBOARD / AUDIT LOGS ---
+# --- 6. DASHBOARD WITH MULTI-COLUMN COLORING ---
 elif menu in ["Audit Logs", "Dashboard", "Status Board"]:
     st.header("📊 Transaction Audit History")
     df = get_data()
     
-    # Apply the background coloring logic to the 'Status' column
-    styled_df = df.style.applymap(style_status, subset=['Status'])
+    # APPLY COLORS TO ALL THREE COLUMNS: HOD Approval, GM Approval, and Status
+    styled_df = df.style.applymap(
+        style_status, 
+        subset=['HOD Approval', 'GM Approval', 'Status']
+    )
     
     st.dataframe(styled_df, use_container_width=True, height=600)
