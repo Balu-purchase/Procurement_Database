@@ -22,13 +22,13 @@ def get_signature():
 
 def style_status(val):
     val_upper = str(val).upper()
-    # Approved Successfully - FULLY GREEN COLOR ENTIRE CELL WITH BOLD TEXT 
+    # Green - APPROVED / SIGNED
     if "SUCCESSFULLY APPROVED" in val_upper or "SIGNED BY" in val_upper or val_upper == "APPROVED": 
         return 'background-color: green; color: white; font-weight: bold'
-    # PENDING - LIGHT ORENGE COLOUR ENTIRE CELL WITH BOLD TEXT
+    # Orange - PENDING
     elif "PENDING" in val_upper: 
         return 'background-color: #FFCC00; color: black; font-weight: bold'
-    # REJECTED - RED COLOUR ENITER CELL WITH BOLD TEXT 
+    # Red - REJECTED
     elif "REJECTED" in val_upper: 
         return 'background-color: red; color: white; font-weight: bold'
     return ''
@@ -58,4 +58,35 @@ if not st.session_state.auth:
                 st.error("Invalid Credentials.")
     
     with img_col:
-        # High-
+        # High-quality office picture for the right side
+        st.image("https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200", 
+                 caption="Resolute Factory Management System", use_container_width=True)
+    st.stop()
+
+# --- 3. DASHBOARD PAGE (After Login) ---
+else:
+    # Sidebar
+    st.sidebar.title(f"👤 {st.session_state.role}")
+    if st.sidebar.button("Logout"):
+        st.session_state.auth = False
+        st.session_state.role = None
+        st.rerun()
+
+    # Define Navigation based on Role
+    if st.session_state.role in ["HOD", "GM_OFFICE"]:
+        menu = st.sidebar.radio("NAVIGATE", ["PENDING APPROVALS", "AUDIT LOGS"])
+    else:
+        menu = "MAIN"
+
+    st.title("PRICE APPROVALS FOR BOM ITEMS")
+    st.divider()
+
+    # --- 🔵 BOM & NON-BOM TEAM MODULE ---
+    if st.session_state.role in ["BOMTEAM", "NONBOMTEAM"]:
+        st.header(f"🛠️ {st.session_state.role}: New Price Request")
+        with st.form("entry_form", clear_on_submit=True):
+            r1c1, r1c2, r1c3, r1c4 = st.columns(4)
+            p_proj = r1c1.text_input("PROJECT")
+            p_num = r1c2.text_input("PART NUMBER")
+            p_desc = r1c3.text_input("DESCRIPTION")
+            p_qps = r
