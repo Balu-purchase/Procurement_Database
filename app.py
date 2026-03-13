@@ -6,7 +6,7 @@ import smtplib
 from email.mime.text import MIMEText
 
 # --- 1. CONFIGURATION ---
-st.set_page_config(page_title="Resolute Approval System", layout="wide")
+st.set_page_config(page_title="Procurement System", layout="wide")
 DB_FILE = "resolute_db.csv"
 
 USERS = {
@@ -44,7 +44,7 @@ if not st.session_state.auth:
     login_col, img_col = st.columns([1, 2]) # 1 part login, 2 parts image
     
     with login_col:
-        st.markdown("# 🏗️ Resolute \n### Approval Portal")
+        st.markdown("# 🏗️ Procurement \n### Approval Portal")
         st.divider()
         user_select = st.selectbox("Select Role", list(USERS.keys()))
         pass_input = st.text_input("Password", type="password")
