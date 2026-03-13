@@ -1,46 +1,21 @@
-# --- 3. DASHBOARD PAGE ---
+# --- 2. LOGIN PAGE ---
+if not st.session_state.auth:
+    login_col, img_col = st.columns([1, 2])
+    with login_col:
+        st.markdown("## 🏗️ Procurement Portal")
+        uid = st.text_input("Username").upper()
+        upw = st.text_input("Password", type="password")
+        if st.button("ENTER SYSTEM"):
+            creds = {"BOMTEAM": "BOM123", "HOD": "HOD789", "GM_OFFICE": "GM2026"}
+            if uid in creds and creds[uid] == upw:
+                st.session_state.auth = True
+                st.session_state.role = uid
+                st.rerun()
+    with img_col:
+        st.image("https://images.unsplash.com/photo-1497366216548-37526070297c", use_container_width=True)
+    st.stop()
+
+# --- 3. DASHBOARD PAGE (This is where your 'else' starts) ---
 else:
     st.sidebar.title(f"👤 {st.session_state.role}")
-    if st.sidebar.button("Logout"):
-        st.session_state.auth = False
-        st.rerun()
-
-    # Determine menu based on role
-    if st.session_state.role in ["HOD", "GM_OFFICE"]:
-        menu = st.sidebar.radio("NAVIGATE", ["PENDING APPROVALS", "NON-BOM REVIEW", "AUDIT LOGS"])
-    else:
-        menu = "MAIN"
-
-    st.title("PRICE APPROVALS FOR BOM ITEMS")
-    st.divider()
-
-    # --- 🔵 BOM TEAM MODULE ---
-    if st.session_state.role == "BOMTEAM":
-        st.header("🛠️ BOM Team: New Price Request")
-        with st.form("bom_entry", clear_on_submit=True):
-            r1c1, r1c2, r1c3, r1c4 = st.columns(4)
-            p_proj = r1c1.text_input("PROJECT")
-            p_num = r1c2.text_input("PART NUMBER")
-            p_desc = r1c3.text_input("DESCRIPTION")
-            p_qps = r1c4.text_input("QPS")
-            
-            r2c1, r2c2, r2c3, r2c4 = st.columns(4)
-            p_uom = r2c1.selectbox("UOM", ["Nos", "KG", "Mtr", "Ltr"])
-            p_supp = r2c2.text_input("SUPPLIER NAME")
-            p_price = r2c3.text_input("PRICE")
-            p_rem = r2c4.text_input("REMARKS")
-            
-            if st.form_submit_button("SUBMIT FOR APPROVAL"):
-                st.session_state.master_data.append({
-                    "VENDOR NAME": p_supp, "PART NUMBER": p_num, "MATERIAL DESCRIPTION": p_desc, 
-                    "PRICE": p_price, "QPS": p_qps, "UOM": p_uom, "REMARKS": p_rem,
-                    "HOD_SIGN": "PENDING", "GM_SIGN": "PENDING", "STATUS": "PENDING AT HOD"
-                })
-                st.rerun()
-        
-        st.subheader("📋 Submission Status")
-        if st.session_state.master_data:
-            df_bom = pd.DataFrame(st.session_state.master_data)
-            st.dataframe(df_bom.style.applymap(style_status, subset=['STATUS', 'HOD_SIGN', 'GM_SIGN']), use_container_width=True)
-
-    # ---
+    # ... Rest of your code for BOM Team, HOD, and GM goes here ...
